@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ma Bibliothèque — Pock</title>
+<meta name="description" content="Suivi de livres, réservations et lectures">
+<meta name="theme-color" content="#3d5a80">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Biblio">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<style>
+  :root {
+    --bg: #f7f5f2; --surface: #fff; --border: #e0dbd5;
+    --text: #2d2a26; --text2: #5a544e; --text3: #7a736a; --text4: #a09889;
+    --blue: #3d5a80; --blue-bg: #eaf0f6;
+    --accent: var(--blue);
+  }
+  .app { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 12px; flex-wrap: wrap; }
+  .title { font-family: var(--font-serif); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .subtitle { font-size: 14px; color: var(--text3); margin-top: 4px; font-weight: 400; }
+  .header-actions { display: flex; gap: 8px; }
+
+  .btn { border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-sans); transition: opacity .15s; font-size: 14px; font-weight: 500; }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--blue); color: #fff; padding: 10px 18px; }
+  .btn-secondary { background: transparent; color: var(--blue); border: 1.5px solid var(--blue); padding: 9px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; font-family: var(--font-sans); }
+  .btn-ghost { background: none; border: none; color: var(--text3); font-size: 14px; cursor: pointer; padding: 10px 14px; font-family: var(--font-sans); }
+  .btn-danger { background: none; border: none; color: #c0392b; font-size: 13px; cursor: pointer; padding: 8px 0; font-family: var(--font-sans); }
+  .btn-icon { background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer; padding: 6px 10px; border-radius: 6px; }
+  .btn-icon:hover { background: #f0ede9; }
+  .btn-icon.del:hover { color: #c0392b; }
+
+  .form-card { background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); animation: slideIn .25s ease; }
+  .form-title { font-family: var(--font-serif); font-size: 18px; margin-bottom: 14px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+  input, textarea, select { font-family: var(--font-sans); font-size: 16px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; background: #faf9f7; color: var(--text); outline: none; transition: border .2s; }
+  input:focus, textarea:focus, select:focus { border-color: var(--blue); }
+  textarea { width: 100%; resize: vertical; }
+  ::placeholder { color: var(--text4); }
+
+  .hint { font-size: 13px; color: var(--text3); margin-bottom: 10px; line-height: 1.5; }
+
+  .controls { display: flex; gap: 10px; margin-bottom: 14px; }
+  .search-input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--surface); }
+  .sort-select { width: 140px; font-size: 16px; padding: 10px 8px; }
+
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .pill { background: transparent; border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 13px; cursor: pointer; font-weight: 500; transition: all .2s; display: flex; align-items: center; gap: 5px; font-family: var(--font-sans); }
+  .pill.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .pill-count { font-size: 11px; opacity: 0.75; }
+
+  .book-list { display: flex; flex-direction: column; gap: 8px; }
+  .empty { text-align: center; padding: 48px 16px; color: var(--text4); font-size: 15px; font-style: italic; }
+
+  .book-card { background: var(--surface); border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); animation: pockFadeIn .3s ease both; }
+  .book-main { display: flex; align-items: flex-start; gap: 12px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .book-info { flex: 1; min-width: 0; }
+  .book-title { font-size: 15px; font-weight: 600; line-height: 1.3; font-family: var(--font-serif); }
+  .book-author { font-size: 13px; color: var(--text2); margin-top: 2px; font-style: italic; }
+  .book-note { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px; white-space: nowrap; flex-shrink: 0; }
+  .book-actions { display: flex; align-items: center; gap: 4px; margin-top: 8px; padding-left: 22px; }
+  .mini-select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; background: #faf9f7; cursor: pointer; }
+
+  .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e8e4df; }
+  .footer-text { font-size: 10px; color: var(--text4); margin-top: 8px; }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 480px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script src="common.js"></script>
+<script>
+const STATUSES = {
+  to_read: { label: "À lire", color: "#e8a87c", bg: "#fef3ec" },
+  reading: { label: "En cours", color: "#5b8a72", bg: "#eef5f0" },
+  read: { label: "Lu", color: "#3d5a80", bg: "#eaf0f6" },
+  reserved: { label: "Réservé", color: "#9b5de5", bg: "#f3ecfc" },
+  borrowed: { label: "Emprunté", color: "#f15bb5", bg: "#fdeef6" },
+};
+const STORAGE_KEY = "pock-biblio-books";
+
+let books = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let search = "";
+let filterStatus = "all";
+let sortBy = "date";
+let showAdd = false;
+let showImport = false;
+let editingId = null;
+let form = { title: "", author: "", note: "", status: "to_read" };
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(books)); }
+
+function parseImport(text) {
+  const PRIMARY_SEP = /\t|\s*[;|]\s*/;          // tab, ;, |
+  const DASH_SEP = /\s+[–—-]+\s+/;              // tiret entouré d'espaces seulement
+  return text.split("\n").filter(l => l.trim()).map(line => {
+    let parts = line.split(PRIMARY_SEP).map(s => s.trim()).filter(Boolean);
+    if (parts.length === 1) parts = line.split(DASH_SEP).map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 2) return { title: parts[0], author: parts[1], note: parts.slice(2).join(" ") };
+    if (parts.length === 1) return { title: parts[0], author: "", note: "" };
+    return null;
+  }).filter(Boolean);
+}
+
+function render() {
+  const q = search.toLowerCase();
+  const filtered = books
+    .filter(b => {
+      if (filterStatus !== "all" && b.status !== filterStatus) return false;
+      if (q && !b.title.toLowerCase().includes(q) && !(b.author||"").toLowerCase().includes(q)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "title") return a.title.localeCompare(b.title, "fr");
+      if (sortBy === "author") return (a.author||"").localeCompare(b.author||"", "fr");
+      // Date: récents d'abord. Tri stable par id en cas d'égalité (batch import).
+      const dateDiff = (b.addedAt || 0) - (a.addedAt || 0);
+      return dateDiff !== 0 ? dateDiff : String(b.id || '').localeCompare(String(a.id || ''));
+    });
+
+  const counts = { all: books.length };
+  Object.keys(STATUSES).forEach(k => { counts[k] = books.filter(b => b.status === k).length; });
+
+  // Form HTML
+  let formHtml = '';
+  if (showAdd || editingId) {
+    formHtml = `<div class="form-card">
+      <div class="form-title">${editingId ? 'Modifier' : 'Nouveau livre'}</div>
+      <div class="form-grid">
+        <input id="fTitle" placeholder="Titre" value="${esc(form.title)}">
+        <input id="fAuthor" placeholder="Auteur" value="${esc(form.author)}">
+        <select id="fStatus" aria-label="Statut">${Object.entries(STATUSES).map(([k,v]) => `<option value="${k}" ${form.status===k?'selected':''}>${v.label}</option>`).join('')}</select>
+        <input id="fNote" placeholder="Note (optionnel)" value="${esc(form.note)}">
+      </div>
+      <div class="form-actions">
+        <button class="btn-ghost" onclick="closeForm()">Annuler</button>
+        <button class="btn btn-primary" onclick="${editingId ? 'doUpdate()' : 'doAdd()' }">${editingId ? 'Enregistrer' : 'Ajouter'}</button>
+      </div>
+    </div>`;
+  }
+
+  let importHtml = '';
+  if (showImport) {
+    importHtml = `<div class="form-card">
+      <div class="form-title">Importer des livres</div>
+      <p class="hint">Collez un extrait : un livre par ligne, séparé par tabulation, point-virgule ou tiret.<br>Format : <em>Titre ; Auteur ; Note</em></p>
+      <textarea id="importArea" rows="6" placeholder="L'Étranger ; Albert Camus&#10;Le Petit Prince ; Saint-Exupéry"></textarea>
+      <div class="form-actions">
+        <button class="btn-ghost" onclick="showImport=false;render()">Annuler</button>
+        <button class="btn btn-primary" onclick="doImport()">Importer</button>
+      </div>
+    </div>`;
+  }
+
+  // Pills
+  const pillsHtml = `<button class="pill ${filterStatus==='all'?'active':''}" onclick="setFilter('all')">Tous <span class="pill-count">${counts.all}</span></button>` +
+    Object.entries(STATUSES).map(([k,v]) => {
+      const isActive = filterStatus === k;
+      const style = isActive ? `background:${v.color};border-color:${v.color};color:#fff` : `color:${v.color};border-color:${v.color}55`;
+      return `<button class="pill ${isActive?'active':''}" style="${style}" onclick="setFilter('${k}')">${v.label} <span class="pill-count">${counts[k]||0}</span></button>`;
+    }).join('');
+
+  // Books
+  let booksHtml = '';
+  if (filtered.length === 0) {
+    booksHtml = `<div class="empty">${books.length === 0 ? "Ajoutez votre premier livre pour commencer !" : "Aucun résultat."}</div>`;
+  } else {
+    booksHtml = filtered.map(book => {
+      const s = STATUSES[book.status] || STATUSES.to_read;
+      const safeTitle = esc(book.title);
+      return `<div class="book-card">
+        <div class="book-main">
+          <div class="status-dot" style="background:${s.color}" aria-hidden="true"></div>
+          <div class="book-info">
+            <div class="book-title">${safeTitle}</div>
+            ${book.author ? `<div class="book-author">${esc(book.author)}</div>` : ''}
+            ${book.note ? `<div class="book-note">${esc(book.note)}</div>` : ''}
+          </div>
+          <span class="badge" style="background:${s.bg};color:${s.color}">${s.label}</span>
+        </div>
+        <div class="book-actions">
+          <select class="mini-select" aria-label="Changer le statut de ${safeTitle}" onchange="changeStatus('${book.id}',this.value)">${Object.entries(STATUSES).map(([k,v]) => `<option value="${k}" ${book.status===k?'selected':''}>${v.label}</option>`).join('')}</select>
+          <button class="btn-icon" aria-label="Modifier ${safeTitle}" title="Modifier" onclick="startEdit('${book.id}')">✎</button>
+          <button class="btn-icon del" aria-label="Supprimer ${safeTitle}" title="Supprimer" onclick="deleteBook('${book.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById("app").innerHTML = `
+    <a class="pock-back" href="index.html">← Pock</a>
+    <div class="header">
+      <div>
+        <div class="title">Ma Bibliothèque</div>
+        <div class="subtitle">${books.length} livre${books.length !== 1 ? 's' : ''} dans votre collection</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" onclick="openImport()">Importer</button>
+        <button class="btn btn-primary" onclick="openAdd()">+ Ajouter</button>
+      </div>
+    </div>
+    ${formHtml}
+    ${importHtml}
+    <div class="controls">
+      <input class="search-input" id="searchInput" placeholder="Rechercher par titre ou auteur…" value="${esc(search)}" aria-label="Rechercher">
+      <select class="sort-select" id="sortSelect" aria-label="Trier">
+        <option value="date" ${sortBy==='date'?'selected':''}>Récents</option>
+        <option value="title" ${sortBy==='title'?'selected':''}>Titre A→Z</option>
+        <option value="author" ${sortBy==='author'?'selected':''}>Auteur A→Z</option>
+      </select>
+    </div>
+    <div class="pills">${pillsHtml}</div>
+    <div class="book-list">${booksHtml}</div>
+    ${books.length > 0 ? `<div class="footer"><button class="btn-danger" onclick="resetAll()">Tout supprimer</button><div class="footer-text">Pock · Données stockées localement</div></div>` : '<div class="footer"><div class="footer-text">Pock · Données stockées localement</div></div>'}
+  `;
+
+  // Bind search & sort (preserve cursor position on search)
+  const si = document.getElementById("searchInput");
+  if (si) si.addEventListener("input", e => {
+    const pos = e.target.selectionStart;
+    search = e.target.value;
+    render();
+    const n = document.getElementById("searchInput");
+    if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch(_){} }
+  });
+  const ss = document.getElementById("sortSelect");
+  if (ss) ss.addEventListener("change", e => { sortBy = e.target.value; render(); });
+}
+
+function openAdd() { showAdd = true; showImport = false; editingId = null; form = { title: "", author: "", note: "", status: "to_read" }; render(); }
+function openImport() { showImport = true; showAdd = false; editingId = null; render(); }
+function closeForm() { showAdd = false; editingId = null; render(); }
+
+function readForm() {
+  return {
+    title: (document.getElementById("fTitle")?.value || "").trim(),
+    author: (document.getElementById("fAuthor")?.value || "").trim(),
+    note: (document.getElementById("fNote")?.value || "").trim(),
+    status: document.getElementById("fStatus")?.value || "to_read",
+  };
+}
+
+function doAdd() {
+  const f = readForm();
+  if (!f.title) return;
+  books.push({ id: genId(), ...f, addedAt: Date.now() });
+  save(); showAdd = false; render();
+}
+
+function doUpdate() {
+  const f = readForm();
+  if (!f.title) return;
+  books = books.map(b => b.id === editingId ? { ...b, ...f } : b);
+  save(); editingId = null; render();
+}
+
+function startEdit(id) {
+  const book = books.find(b => b.id === id);
+  if (!book) return;
+  editingId = id;
+  form = { title: book.title, author: book.author || "", note: book.note || "", status: book.status };
+  showAdd = false; showImport = false; render();
+}
+
+function deleteBook(id) {
+  const book = books.find(b => b.id === id);
+  if (!book) return;
+  if (!confirm(`Supprimer « ${book.title} » ?`)) return;
+  books = books.filter(b => b.id !== id);
+  save(); render();
+}
+
+function changeStatus(id, status) {
+  books = books.map(b => b.id === id ? { ...b, status } : b);
+  save(); render();
+}
+
+function doImport() {
+  const text = document.getElementById("importArea")?.value || "";
+  const parsed = parseImport(text);
+  if (!parsed.length) return;
+  // Stagger addedAt by 1ms per entry so date sort is deterministic after batch import
+  const base = Date.now();
+  parsed.forEach((b, i) => books.push({ id: genId(), status: "to_read", addedAt: base + i, ...b }));
+  save(); showImport = false; render();
+}
+
+function setFilter(s) { filterStatus = s; render(); }
+
+function resetAll() {
+  if (!confirm("Supprimer tous les livres ?")) return;
+  books = [];
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

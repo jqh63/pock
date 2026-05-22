@@ -1,0 +1,63 @@
+/* common.css — base partagée entre les apps Pock */
+/* Polices 100% système / open source (pas de Google Fonts, pas de dépendance externe) */
+
+:root {
+  /* Font stacks natives — identiques à ce que GitHub, Apple, Medium utilisent */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace;
+  --font-serif: Georgia, "Iowan Old Style", "Apple Garamond", Palatino, "Times New Roman", serif;
+
+  /* Aliases hérités pour compat avec le CSS existant des apps */
+  --sans: var(--font-sans);
+  --mono: var(--font-mono);
+  --serif: var(--font-serif);
+
+  /* Palette par défaut (les apps peuvent override) */
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --border: #e2e7ed;
+  --text: #1a2332;
+  --text2: #4b5a6e;   /* ancien #5a6a7e — un cran plus foncé pour contraste AA */
+  --text3: #7a889a;   /* ancien #94a1b2 — un cran plus foncé pour petit texte */
+  --accent: #3563e9;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lien "← Pock" en haut de chaque app */
+.pock-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  text-decoration: none;
+  margin-bottom: 16px;
+  transition: color .15s;
+}
+.pock-back:hover { color: var(--text2); }
+
+/* Focus accessible sur tous les éléments interactifs */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Animation utilisée par plusieurs apps */
+@keyframes pockFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi km LOA — Pock</title>
+<meta name="description" content="Suivi kilométrique LOA — tracker de km pour contrat de location">
+<meta name="theme-color" content="#1a2332">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Suivi km">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<style>
+  :root {
+    --accent: #3563e9;
+    --success: #0d9668; --success-bg: #ecfdf5; --success-border: #6ee7b7;
+    --danger: #e5393f; --danger-bg: #fef2f2; --danger-border: #fca5a5;
+  }
+  .app { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  /* Selector */
+  .selector { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .sel-btn { flex: 1; min-width: 120px; padding: 12px 10px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; text-align: left; transition: all .15s; font-family: var(--font-sans); }
+  .sel-btn:hover { border-color: #c0c8d2; }
+  .sel-btn.active { border-color: var(--accent); background: #f0f4ff; }
+  .sel-dot { width: 28px; height: 4px; border-radius: 2px; margin-bottom: 8px; }
+  .sel-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .sel-detail { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: var(--font-mono); }
+  .sel-add { flex: 0 0 auto; min-width: 44px; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 12px; border: 2px dashed var(--border); background: none; cursor: pointer; font-size: 22px; color: var(--text3); transition: all .15s; font-family: var(--font-sans); }
+  .sel-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Header */
+  .header { margin-bottom: 20px; }
+  .header-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+  .vehicle { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; }
+  .contract-info { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  .dates { font-size: 11px; color: var(--text3); font-family: var(--font-mono); text-align: right; }
+  .header-actions { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+  .header-actions button { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--text3); cursor: pointer; font-family: var(--font-sans); }
+  .header-actions button:hover { color: var(--text2); border-color: #c0c8d2; }
+  .header-actions .del-vehicle:hover { color: var(--danger); border-color: var(--danger); }
+  .header-actions .reset-entries:hover { color: var(--danger); border-color: var(--danger); }
+
+  .banner { padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 14px; text-align: center; }
+  .banner-info { background: #eef2ff; color: var(--accent); border: 1px solid #c7d7fe; }
+  .banner-done { background: var(--success-bg); color: #166534; border: 1px solid var(--success-border); }
+
+  /* Cost card */
+  .cost-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+  .cost-card.success { border-color: var(--success-border); background: var(--success-bg); }
+  .cost-card.danger { border-color: var(--danger-border); background: var(--danger-bg); }
+  .cost-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .cost-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); }
+  .cost-rate { font-size: 11px; font-family: var(--font-mono); color: var(--text2); font-weight: 600; }
+  .cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .cost-item { text-align: center; }
+  .cost-item-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .cost-item-value { font-size: 20px; font-weight: 700; font-family: var(--font-mono); line-height: 1.1; }
+  .cost-item-detail { font-size: 10px; color: var(--text2); margin-top: 3px; font-family: var(--font-mono); }
+  .cost-basis { font-size: 10px; color: var(--text3); text-align: center; margin-top: 10px; font-style: italic; }
+
+  /* Hero delta */
+  .hero-delta { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 14px; text-align: center; }
+  .hero-delta.success { border-color: var(--success-border); background: var(--success-bg); }
+  .hero-delta.danger { border-color: var(--danger-border); background: var(--danger-bg); }
+  .hero-delta-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); margin-bottom: 6px; }
+  .hero-delta-value { font-size: 36px; font-weight: 700; font-family: var(--font-mono); line-height: 1.1; }
+  .hero-delta-unit { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .hero-delta-detail { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 8px; }
+
+  /* Quick add */
+  .quick-add { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+  .quick-add .qa-field { flex: 1; }
+  .quick-add .qa-field label { display: block; font-size: 10px; font-weight: 600; color: var(--text3); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .quick-add .qa-field input { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 16px; font-family: var(--font-mono); background: var(--bg); color: var(--text); }
+  .quick-add .qa-btn { padding: 9px 18px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); white-space: nowrap; flex-shrink: 0; }
+  .quick-add .qa-btn:hover { opacity: .85; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 10px; text-align: center; }
+  .kpi.success { border-color: var(--success-border); background: var(--success-bg); }
+  .kpi.danger { border-color: var(--danger-border); background: var(--danger-bg); }
+  .kpi-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); margin-bottom: 4px; }
+  .kpi-value { font-size: 22px; font-weight: 700; font-family: var(--font-mono); line-height: 1.1; }
+  .kpi-unit { font-size: 10px; color: var(--text2); margin-top: 3px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text2); margin-bottom: 14px; }
+
+  .progress-group { margin-bottom: 14px; }
+  .progress-group:last-child { margin-bottom: 0; }
+  .progress-head { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .progress-label { font-size: 12px; font-weight: 600; color: var(--text2); }
+  .progress-pct { font-size: 12px; font-weight: 700; font-family: var(--font-mono); }
+  .progress-track { position: relative; height: 8px; background: #eef1f5; border-radius: 4px; }
+  .progress-bar { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px; transition: width .4s ease; }
+  .progress-marker { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); border-radius: 1px; opacity: .4; }
+  .progress-detail { font-size: 10px; color: var(--text3); font-family: var(--font-mono); margin-top: 5px; }
+
+  .chart-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+  .chart-wrap svg { display: block; width: 100%; max-width: 700px; }
+  .legend { display: flex; gap: 18px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  .legend span { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+  .legend-dot { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  .entries-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .entries-head .card-title { margin-bottom: 0; }
+  .btn { border: none; border-radius: 8px; padding: 7px 16px; font-size: 12px; font-weight: 600; font-family: var(--font-sans); cursor: pointer; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-dark { background: var(--text); color: #fff; width: 100%; padding: 11px; font-size: 13px; }
+  .btn-outline { background: none; border: 1px solid var(--border); color: var(--text2); padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: var(--font-sans); cursor: pointer; }
+
+  .form { background: var(--bg); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-field { flex: 1; min-width: 100px; }
+  .form-field label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+  .form-field input, .form-field select { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 16px; font-family: var(--font-mono); background: #fff; color: var(--text); }
+
+  .empty-state { text-align: center; padding: 48px 20px; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .empty-state p { font-size: 14px; color: var(--text2); margin-bottom: 20px; }
+
+  .empty { text-align: center; color: var(--text3); font-size: 13px; padding: 28px 0; }
+  .entry-list { border: 1px solid #eef1f5; border-radius: 8px; overflow: hidden; }
+  .entry { display: flex; align-items: center; padding: 10px 12px; gap: 8px; font-size: 13px; }
+  .entry:nth-child(even) { background: #fafbfc; }
+  .entry-date { flex: 1; color: var(--text2); font-size: 12px; }
+  .entry-km { font-weight: 700; font-family: var(--font-mono); flex: 1; text-align: right; }
+  .entry-delta { font-size: 11px; font-weight: 600; font-family: var(--font-mono); width: 72px; text-align: right; }
+  .entry-actions { display: flex; gap: 2px; margin-left: 4px; }
+  .entry-actions button { background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text3); padding: 4px 8px; border-radius: 4px; }
+  .entry-actions button:hover { background: #eef1f5; }
+  .entry-actions .del:hover { color: var(--danger); }
+  .edit-input { width: 90px; padding: 3px 7px; border: 1px solid var(--border); border-radius: 5px; font-size: 16px; font-family: var(--font-mono); }
+
+  .footer { text-align: center; font-size: 10px; color: var(--text3); padding: 12px 0 0; }
+
+  .card, .kpi { animation: pockFadeIn .3s ease both; }
+  .kpi:nth-child(2) { animation-delay: .04s; }
+  .kpi:nth-child(3) { animation-delay: .08s; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script src="common.js"></script>
+<script>
+const COLORS = ["#3563e9","#00796b","#d97706","#9333ea","#dc2626","#0891b2","#4f46e5","#059669"];
+const VEHICLES_KEY = "pock-km-vehicles";
+const ACTIVE_KEY = "pock-km-active";
+
+// Projection : on s'appuie sur le rythme depuis le début du contrat (pas depuis le 1er relevé).
+// Un seul relevé suffit si le contrat tourne depuis assez longtemps.
+const PROJECTION_MIN_DAYS = 30;     // contrat trop jeune → rythme trop bruité
+const STALE_ENTRY_DAYS = 60;        // dernier relevé plus vieux que ça → warning
+
+const DEFAULT_VEHICLES = [
+  { id: "vehicule-1", name: "Véhicule 1", color: "#3563e9", startDate: "2024-01-01", durationMonths: 37, kmPerYear: 10000, excessCostPerKm: 0.15 },
+  { id: "vehicule-2", name: "Véhicule 2", color: "#00796b", startDate: "2024-06-01", durationMonths: 37, kmPerYear: 10000, excessCostPerKm: 0.12 },
+];
+
+let vehicles = JSON.parse(localStorage.getItem(VEHICLES_KEY) || "null");
+if (!vehicles) { vehicles = DEFAULT_VEHICLES; saveVehicles(); }
+// Migration: add excessCostPerKm if missing
+let needsMigration = false;
+vehicles.forEach(v => {
+  if (v.excessCostPerKm === undefined) {
+    const defaultV = DEFAULT_VEHICLES.find(d => d.id === v.id);
+    v.excessCostPerKm = defaultV?.excessCostPerKm || 0;
+    needsMigration = true;
+  }
+});
+if (needsMigration) saveVehicles();
+let activeId = localStorage.getItem(ACTIVE_KEY) || (vehicles[0]?.id || "");
+let entriesCache = {};
+let showAddVehicle = false;
+let editingId = null;
+let editKmVal = "";
+
+function saveVehicles() { localStorage.setItem(VEHICLES_KEY, JSON.stringify(vehicles)); }
+function getVehicle() { return vehicles.find(v => v.id === activeId) || vehicles[0] || null; }
+
+function vehicleMeta(v) {
+  if (!v) return null;
+  const start = new Date(v.startDate);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + v.durationMonths);
+  const totalKm = Math.round(v.kmPerYear * (v.durationMonths / 12));
+  const totalDays = (end - start) / 864e5;
+  return { ...v, start, end, totalKm, kmPerDay: totalKm / totalDays, totalDays };
+}
+
+function getEntries(v) {
+  if (!v) return [];
+  const key = "pock-km-" + v.id;
+  if (!entriesCache[v.id]) entriesCache[v.id] = JSON.parse(localStorage.getItem(key) || "[]");
+  return entriesCache[v.id];
+}
+function setEntries(v, data) {
+  if (!v) return;
+  const key = "pock-km-" + v.id;
+  entriesCache[v.id] = data;
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function daysBetween(a, b) { return Math.floor((b - a) / 864e5); }
+function fmtDate(d) { return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); }
+function fmtNum(n) { return n.toLocaleString("fr-FR"); }
+function deltaText(d) {
+  const abs = Math.abs(d);
+  if (d === 0) return { sign: '', abs: 0, label: 'km pile ✓', cls: 'success' };
+  if (d > 0) return { sign: '+', abs, label: 'km en trop ⚠️', cls: 'danger' };
+  return { sign: '-', abs, label: 'km de marge ✓', cls: 'success' };
+}
+
+function render() {
+  const V = getVehicle();
+
+  // No vehicles: show empty state
+  if (!V) {
+    document.getElementById("app").innerHTML = `
+      <a class="pock-back" href="index.html">← Pock</a>
+      <div class="empty-state">
+        <div class="icon" aria-hidden="true">🚗</div>
+        <h2>Suivi km LOA</h2>
+        <p>Ajoute ton premier véhicule pour commencer le suivi kilométrique.</p>
+        <button class="btn btn-accent" onclick="showAddVehicle=true;render()">+ Ajouter un véhicule</button>
+      </div>
+      ${showAddVehicle ? vehicleFormHtml() : ''}
+      <div class="footer">Pock · Données stockées localement</div>
+    `;
+    return;
+  }
+
+  const C = vehicleMeta(V);
+  const ACCENT = V.color || COLORS[0];
+  const entries = getEntries(V);
+  const now = new Date();
+  const rawDaysElapsed = daysBetween(C.start, now);
+  const daysElapsed = Math.max(0, rawDaysElapsed);
+  const totalDays = daysBetween(C.start, C.end);
+  const timeProgress = Math.min(100, Math.max(0, (daysElapsed / totalDays) * 100));
+  const contractEnded = now > C.end;
+  const notStarted = rawDaysElapsed < 0;
+
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+  const currentKm = latest ? latest.km : 0;
+  const kmProgress = (currentKm / C.totalKm) * 100;
+  const expectedKm = Math.round(C.kmPerDay * daysElapsed);
+  const delta = currentKm - expectedKm;
+  const dt = deltaText(delta);
+  const monthsRemaining = Math.max(0, Math.ceil((C.end - now) / (864e5 * 30.44)));
+  const kmRemaining = C.totalKm - currentKm;
+  const kmPerMonth = monthsRemaining > 0 ? Math.round(kmRemaining / monthsRemaining) : 0;
+
+  // Cost projections — un seul relevé suffit, le rythme s'appuie sur la durée écoulée du contrat.
+  // (Pas sur la durée entre relevés : tu peux n'avoir qu'un point récent après un long silence.)
+  const excessRate = V.excessCostPerKm || 0;
+  const canProject = daysElapsed >= PROJECTION_MIN_DAYS && currentKm > 0;
+  const paceKmPerDay = daysElapsed > 0 ? currentKm / daysElapsed : 0;
+  // Capped so projection never < currentKm
+  const projectedKm = Math.max(currentKm, Math.round(paceKmPerDay * totalDays));
+  const projectedExcess = Math.max(0, projectedKm - C.totalKm);
+  const projectedCost = projectedExcess * excessRate;
+  // Current excess if contract ended now
+  const currentExcess = Math.max(0, currentKm - C.totalKm);
+  const currentCost = currentExcess * excessRate;
+  // Last entry age (in days), used to flag a projection that may be drifting
+  const lastEntryDate = latest ? new Date(latest.date) : null;
+  const lastEntryAgeDays = lastEntryDate ? Math.max(0, daysBetween(lastEntryDate, now)) : null;
+  const lastEntryStale = lastEntryAgeDays !== null && lastEntryAgeDays >= STALE_ENTRY_DAYS;
+  const fmtEur = n => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+
+  // Chart
+  const chartData = [];
+  for (let m = 0; m <= C.durationMonths; m++) {
+    const d = new Date(C.start);
+    d.setMonth(d.getMonth() + m);
+    chartData.push({ month: m, label: d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }), expected: Math.round(C.kmPerDay * daysBetween(C.start, d)) });
+  }
+  const entryPts = sorted.map(e => ({ month: Math.max(0, daysBetween(C.start, new Date(e.date))) / 30.44, km: e.km }));
+
+  const gridStep = C.totalKm <= 20000 ? 5000 : C.totalKm <= 50000 ? 10000 : 25000;
+  const yGL = []; for (let v = 0; v <= C.totalKm; v += gridStep) yGL.push(v);
+  if (yGL[yGL.length - 1] !== C.totalKm) yGL.push(C.totalKm);
+
+  const W = 700, H = 260, P = { t: 20, r: 30, b: 40, l: 55 };
+  const cw = W - P.l - P.r, ch = H - P.t - P.b;
+  const xS = m => P.l + (m / C.durationMonths) * cw;
+  const yS = km => P.t + ch - (km / C.totalKm) * ch;
+  const expLine = chartData.map((d, i) => `${i ? 'L' : 'M'}${xS(d.month)},${yS(d.expected)}`).join(' ');
+  const actLine = entryPts.length >= 2 ? entryPts.map((p, i) => `${i ? 'L' : 'M'}${xS(p.month)},${yS(p.km)}`).join(' ') : '';
+  const todayM = daysElapsed / 30.44;
+  const showTodayLine = !contractEnded && !notStarted && todayM <= C.durationMonths;
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  let bannerHtml = '';
+  if (notStarted) { const du = Math.abs(rawDaysElapsed); bannerHtml = `<div class="banner banner-info">Contrat démarre dans ${du} jour${du > 1 ? 's' : ''}</div>`; }
+  else if (contractEnded) { bannerHtml = `<div class="banner banner-done">Contrat terminé — ${fmtNum(currentKm)} km parcourus sur ${fmtNum(C.totalKm)} autorisés</div>`; }
+
+  const selectorHtml = vehicles.map(v => `
+    <button class="sel-btn ${v.id === activeId ? 'active' : ''}" onclick="switchVehicle('${v.id}')" ${v.id === activeId ? `style="border-color:${v.color};box-shadow:0 0 0 1px ${v.color}"` : ''}>
+      <div class="sel-dot" style="background:${v.color}"></div>
+      <div class="sel-name">${esc(v.name)}</div>
+      <div class="sel-detail">${fmtNum(v.kmPerYear)} km/an · ${v.durationMonths} mois</div>
+    </button>
+  `).join('');
+
+  // Cost card: only show if excessRate is set. If contract ended → just actual. Else → actual + projection (if canProject).
+  let costCardHtml = '';
+  if (excessRate > 0) {
+    const costCls = (contractEnded ? currentCost : (canProject ? projectedCost : currentCost)) > 0 ? 'danger' : 'success';
+    let projBlock = '';
+    let basisNote = '';
+    if (!contractEnded) {
+      if (canProject) {
+        projBlock = `
+          <div class="cost-item">
+            <div class="cost-item-label">Projeté fin de contrat</div>
+            <div class="cost-item-value">${projectedCost > 0 ? fmtEur(projectedCost) : '0 €'}</div>
+            <div class="cost-item-detail">${projectedExcess > 0 ? `+${fmtNum(projectedExcess)} km estimés` : 'dans le forfait'}</div>
+          </div>`;
+        const baseTxt = `Projection : rythme moyen ${Math.round(paceKmPerDay)} km/j depuis le début du contrat`;
+        const staleTxt = lastEntryStale ? ` · ⚠️ dernier relevé il y a ${lastEntryAgeDays} j, pense à mettre à jour` : '';
+        basisNote = `<div class="cost-basis">${baseTxt}${staleTxt}</div>`;
+      } else if (currentKm === 0) {
+        basisNote = `<div class="cost-basis">Projection indisponible : aucun relevé saisi</div>`;
+      } else {
+        basisNote = `<div class="cost-basis">Projection indisponible : contrat trop jeune (${daysElapsed} j sur ${PROJECTION_MIN_DAYS} requis)</div>`;
+      }
+    }
+    costCardHtml = `
+      <div class="cost-card ${costCls}">
+        <div class="cost-head">
+          <span class="cost-label">Coût km excédentaires</span>
+          <span class="cost-rate">${excessRate.toFixed(2)}€/km</span>
+        </div>
+        <div class="cost-grid">
+          <div class="cost-item">
+            <div class="cost-item-label">${contractEnded ? 'Total final' : 'Actuel'}</div>
+            <div class="cost-item-value">${currentExcess > 0 ? fmtEur(currentCost) : '0 €'}</div>
+            <div class="cost-item-detail">${currentExcess > 0 ? `+${fmtNum(currentExcess)} km` : 'dans le forfait'}</div>
+          </div>
+          ${projBlock}
+        </div>
+        ${basisNote}
+      </div>`;
+  }
+
+  document.getElementById("app").innerHTML = `
+    <a class="pock-back" href="index.html">← Pock</a>
+    <div class="selector">
+      ${selectorHtml}
+      <button class="sel-add" onclick="showAddVehicle=true;render()" title="Ajouter un véhicule" aria-label="Ajouter un véhicule">+</button>
+    </div>
+    ${showAddVehicle ? vehicleFormHtml() : ''}
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <div class="vehicle" style="color:${ACCENT}">${esc(C.name)}</div>
+          <div class="contract-info">LOA ${C.durationMonths} mois · ${fmtNum(C.kmPerYear)} km/an · ${fmtNum(C.totalKm)} km total</div>
+          <div class="header-actions">
+            ${sorted.length > 0 ? `<button class="reset-entries" onclick="resetEntries()">Réinitialiser les relevés</button>` : ''}
+            <button class="del-vehicle" onclick="deleteVehicle('${V.id}')">Supprimer ce véhicule</button>
+          </div>
+        </div>
+        <div class="dates">${fmtDate(C.start)} → ${fmtDate(C.end)}</div>
+      </div>
+    </div>
+    ${bannerHtml}
+
+    <div class="hero-delta ${dt.cls}">
+      <div class="hero-delta-label">Écart vs prévu</div>
+      <div class="hero-delta-value">${dt.sign}${fmtNum(dt.abs)} km</div>
+      <div class="hero-delta-unit">${dt.label}</div>
+      <div class="hero-delta-detail">${fmtNum(currentKm)} parcourus · ${fmtNum(expectedKm)} attendus à ce jour</div>
+    </div>
+
+    ${costCardHtml}
+
+    <div class="quick-add">
+      <div class="qa-field"><label for="inputDate">Date</label><input type="date" id="inputDate" value="${todayStr}"></div>
+      <div class="qa-field"><label for="inputKm">Compteur</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="inputKm" placeholder="km" onkeydown="if(event.key==='Enter')addEntry()"></div>
+      <button class="qa-btn" style="background:${ACCENT}" onclick="addEntry()">+ Ajouter</button>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Compteur actuel</div><div class="kpi-value">${fmtNum(currentKm)}</div><div class="kpi-unit">km</div></div>
+      <div class="kpi"><div class="kpi-label">Budget restant</div><div class="kpi-value">${fmtNum(kmPerMonth)}</div><div class="kpi-unit">km/mois</div></div>
+    </div>
+    <div class="card">
+      <div class="progress-group">
+        <div class="progress-head"><span class="progress-label">Temps écoulé</span><span class="progress-pct">${timeProgress.toFixed(1)}%</span></div>
+        <div class="progress-track"><div class="progress-bar" style="width:${timeProgress}%;background:#64748b"></div></div>
+        <div class="progress-detail">${daysElapsed}j / ${totalDays}j — ${contractEnded ? 'terminé' : monthsRemaining + ' mois restants'}</div>
+      </div>
+      <div class="progress-group">
+        <div class="progress-head"><span class="progress-label">Kilomètres utilisés</span><span class="progress-pct">${kmProgress.toFixed(1)}%</span></div>
+        <div class="progress-track">
+          <div class="progress-bar" style="width:${Math.min(100, kmProgress)}%;background:${kmProgress > timeProgress + 5 ? '#e5393f' : '#0d9668'}"></div>
+          <div class="progress-marker" style="left:${Math.min(100, timeProgress)}%"></div>
+        </div>
+        <div class="progress-detail">${fmtNum(currentKm)} / ${fmtNum(C.totalKm)} km — attendu : ${fmtNum(expectedKm)} km</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Suivi kilométrique</div>
+      <div class="chart-wrap">
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Graphique du suivi kilométrique">
+          ${yGL.map(v => `<line x1="${P.l}" y1="${yS(v)}" x2="${W-P.r}" y2="${yS(v)}" stroke="#e2e7ed" stroke-width="1"/><text x="${P.l-8}" y="${yS(v)+4}" text-anchor="end" fill="#94a1b2" font-size="10" font-family="ui-monospace,monospace">${v>=1000?(v/1000).toFixed(v%1000===0?0:1)+'k':v}</text>`).join('')}
+          ${chartData.filter((_,i)=>i%6===0).map(d=>`<text x="${xS(d.month)}" y="${H-8}" text-anchor="middle" fill="#94a1b2" font-size="10" font-family="ui-monospace,monospace">${d.label}</text>`).join('')}
+          <path d="${expLine}" fill="none" stroke="#c4cdd8" stroke-width="2" stroke-dasharray="6 4"/>
+          ${actLine?`<path d="${actLine}" fill="none" stroke="${ACCENT}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`:''}
+          ${entryPts.map(p=>`<circle cx="${xS(p.month)}" cy="${yS(p.km)}" r="4" fill="${ACCENT}" stroke="#fff" stroke-width="2"/>`).join('')}
+          ${showTodayLine?`<line x1="${xS(todayM)}" y1="${P.t}" x2="${xS(todayM)}" y2="${H-P.b}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3"/>`:''}
+        </svg>
+      </div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#c4cdd8"></span> Prévu</span>
+        ${actLine?`<span><span class="legend-dot" style="background:${ACCENT}"></span> Réel</span>`:''}
+        ${showTodayLine?`<span><span class="legend-dot" style="background:#f59e0b"></span> Aujourd'hui</span>`:''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Relevés</div>
+      ${sorted.length===0?'<div class="empty">Aucun relevé. Saisis ton compteur ci-dessus !</div>':`
+        <div class="entry-list">${[...sorted].reverse().map(e=>{
+          const d=new Date(e.date);const dfs=Math.max(0,daysBetween(C.start,d));const exp=Math.round(C.kmPerDay*dfs);const diff=e.km-exp;
+          const isEditing = editingId===e.id;
+          return`<div class="entry"><div class="entry-date">${d.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}</div><div class="entry-km">${isEditing?`<input class="edit-input" type="text" inputmode="numeric" pattern="[0-9]*" id="editInput" value="${esc(String(editKmVal))}" onkeydown="if(event.key==='Enter')saveEdit('${e.id}')">`:`${fmtNum(e.km)} km`}</div><div class="entry-delta" style="color:${diff>0?'#e5393f':'#0d9668'}">${diff>0?'+':''}${fmtNum(diff)}</div><div class="entry-actions">${isEditing?`<button onclick="saveEdit('${e.id}')" aria-label="Valider">✓</button>`:`<button onclick="startEdit('${e.id}',${e.km})" aria-label="Modifier le relevé">✎</button>`}<button class="del" onclick="deleteEntry('${e.id}')" aria-label="Supprimer le relevé">✕</button></div></div>`;
+        }).join('')}</div>`}
+    </div>
+    <div class="footer">Pock · Données stockées localement</div>
+  `;
+}
+
+function vehicleFormHtml() {
+  return `<div class="card" style="border-color:var(--accent)">
+    <div class="card-title">Nouveau véhicule</div>
+    <div class="form" style="background:transparent;padding:0;margin:0">
+      <div class="form-row"><div class="form-field" style="flex:2"><label>Nom du véhicule</label><input type="text" id="vName" placeholder="ex: Peugeot e-208"></div><div class="form-field"><label>Couleur</label><select id="vColor">${COLORS.map((c,i)=>`<option value="${c}" style="color:${c}">Couleur ${i+1}</option>`).join('')}</select></div></div>
+      <div class="form-row"><div class="form-field"><label>Date de début</label><input type="date" id="vStart"></div><div class="form-field"><label>Durée (mois)</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="vMonths" placeholder="37" value="37"></div><div class="form-field"><label>km / an</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="vKmYear" placeholder="10000" value="10000"></div></div>
+      <div class="form-row"><div class="form-field"><label>Coût / km excédentaire (€)</label><input type="text" inputmode="decimal" id="vExcessCost" placeholder="0.15" value="0.15"></div></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-dark" style="flex:2" onclick="addVehicle()">Ajouter</button><button class="btn-outline" onclick="showAddVehicle=false;render()">Annuler</button></div>
+    </div>
+  </div>`;
+}
+
+function addVehicle() {
+  const name = document.getElementById("vName")?.value?.trim();
+  const color = document.getElementById("vColor")?.value || COLORS[vehicles.length % COLORS.length];
+  const startDate = document.getElementById("vStart")?.value;
+  const durationMonths = parseInt(document.getElementById("vMonths")?.value);
+  const kmPerYear = parseInt(document.getElementById("vKmYear")?.value);
+  const rawExcess = (document.getElementById("vExcessCost")?.value || "").replace(",", ".");
+  const excessCostPerKm = parseFloat(rawExcess) || 0;
+  if (!name || !startDate || !durationMonths || !kmPerYear || durationMonths < 1 || kmPerYear < 1) {
+    alert("Remplis tous les champs (nom, date, durée, km/an).");
+    return;
+  }
+  const id = genId();
+  vehicles.push({ id, name, color, startDate, durationMonths, kmPerYear, excessCostPerKm });
+  saveVehicles();
+  activeId = id; localStorage.setItem(ACTIVE_KEY, id);
+  showAddVehicle = false;
+  render();
+}
+
+function deleteVehicle(id) {
+  if (!confirm("Supprimer ce véhicule et tous ses relevés ?")) return;
+  vehicles = vehicles.filter(v => v.id !== id);
+  localStorage.removeItem("pock-km-" + id);
+  delete entriesCache[id];
+  saveVehicles();
+  activeId = vehicles[0]?.id || "";
+  localStorage.setItem(ACTIVE_KEY, activeId);
+  render();
+}
+
+function resetEntries() {
+  const V = getVehicle();
+  if (!V) return;
+  const n = getEntries(V).length;
+  if (n === 0) return;
+  if (!confirm(`Supprimer les ${n} relevé${n>1?'s':''} du véhicule « ${V.name} » ?\nLe véhicule et sa configuration sont conservés.`)) return;
+  setEntries(V, []);
+  editingId = null;
+  render();
+}
+
+function switchVehicle(id) { activeId = id; localStorage.setItem(ACTIVE_KEY, id); editingId = null; showAddVehicle = false; render(); }
+
+function addEntry() {
+  const V = getVehicle(); if (!V) return;
+  const date = document.getElementById("inputDate")?.value;
+  const kmRaw = document.getElementById("inputKm")?.value;
+  const km = parseInt(kmRaw);
+  if (!date || isNaN(km) || km < 0) return;
+
+  const C = vehicleMeta(V);
+  const entryDate = new Date(date);
+  const today = new Date(); today.setHours(23, 59, 59, 999);
+
+  // Guard: date in the future
+  if (entryDate > today) {
+    alert("La date ne peut pas être dans le futur.");
+    return;
+  }
+  // Guard: date before contract start
+  if (entryDate < C.start) {
+    alert("La date est antérieure au début du contrat (" + fmtDate(C.start) + ").");
+    return;
+  }
+
+  // Warn: km regression vs most recent earlier entry
+  const existing = getEntries(V);
+  const sorted = [...existing].sort((a, b) => a.date.localeCompare(b.date));
+  const prior = sorted.filter(e => e.date <= date).pop();
+  if (prior && km < prior.km) {
+    if (!confirm(`Le compteur baisse (${fmtNum(prior.km)} km le ${fmtDate(new Date(prior.date))} → ${fmtNum(km)} km).\nEnregistrer quand même ?`)) return;
+  }
+
+  existing.push({ id: genId(), date, km });
+  existing.sort((a, b) => a.date.localeCompare(b.date));
+  setEntries(V, existing);
+  // Clear input after successful add
+  const inputKm = document.getElementById("inputKm");
+  if (inputKm) inputKm.value = "";
+  render();
+}
+
+function deleteEntry(id) { const V = getVehicle(); if (!V) return; setEntries(V, getEntries(V).filter(e => String(e.id) !== String(id))); render(); }
+function startEdit(id, km) { editingId = id; editKmVal = km; render(); const el = document.getElementById("editInput"); if (el) el.focus(); }
+function saveEdit(id) {
+  const el = document.getElementById("editInput"); if (!el) return;
+  const km = parseInt(el.value); if (isNaN(km) || km < 0) return;
+  const V = getVehicle(); if (!V) return;
+  setEntries(V, getEntries(V).map(e => String(e.id) === String(id) ? { ...e, km } : e));
+  editingId = null; render();
+}
+
+render();
+</script>
+</body>
+</html>

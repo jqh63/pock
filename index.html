@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pock — Pocket Tools</title>
+<meta name="description" content="Pock — pocket tools personnels, hors-ligne">
+<meta name="theme-color" content="#1a2332">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pock">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap { max-width:480px; width:100%; margin:0 auto; padding:32px 16px 48px; }
+  h1 { font-size:26px; font-weight:700; letter-spacing:-0.04em; text-align:center; margin-bottom:4px; }
+  .tagline { text-align:center; font-size:13px; color:var(--text2); margin-bottom:32px; }
+  .section-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); margin-bottom:10px; padding-left:4px; }
+  .cards { display:flex; flex-direction:column; gap:10px; margin-bottom:28px; }
+  a.card { display:block; text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px 18px; transition:transform .15s,box-shadow .15s; color:var(--text); }
+  a.card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.06); }
+  .card-icon { font-size:28px; margin-bottom:8px; }
+  .card-dots { display:flex; gap:6px; margin-bottom:10px; }
+  .card-dots span { width:28px; height:4px; border-radius:2px; }
+  .card-name { font-size:17px; font-weight:700; color:var(--text); margin-bottom:3px; letter-spacing:-0.01em; }
+  .card-detail { font-size:12px; color:var(--text2); line-height:1.4; }
+
+  /* Data panel */
+  .data-toggle { width:100%; background:none; border:1px dashed var(--border); border-radius:12px; padding:12px; font-size:13px; color:var(--text2); cursor:pointer; font-family:var(--font-sans); display:flex; align-items:center; justify-content:center; gap:8px; transition:all .15s; }
+  .data-toggle:hover { border-color:var(--text3); color:var(--text); }
+  .data-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-top:10px; animation:pockFadeIn .25s ease both; }
+  .data-panel h3 { font-size:13px; font-weight:700; margin-bottom:6px; }
+  .data-panel p { font-size:12px; color:var(--text2); line-height:1.5; margin-bottom:12px; }
+  .data-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .data-btn { flex:1; min-width:120px; padding:10px 12px; font-size:13px; font-weight:600; border-radius:8px; border:1px solid var(--border); background:var(--bg); cursor:pointer; font-family:var(--font-sans); color:var(--text); }
+  .data-btn:hover { border-color:var(--text3); }
+  .data-btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .data-btn.primary:hover { opacity:.9; }
+  .data-msg { font-size:12px; margin-top:10px; padding:8px 10px; border-radius:6px; }
+  .data-msg.ok { background:#ecfdf5; color:#166534; border:1px solid #6ee7b7; }
+  .data-msg.err { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
+  .data-mode { display:flex; gap:6px; margin-top:8px; font-size:12px; color:var(--text2); }
+  .data-mode label { display:flex; gap:4px; cursor:pointer; align-items:center; }
+
+  .footer { text-align:center; font-size:10px; color:var(--text3); margin-top:20px; }
+
+  a.card { animation:pockFadeIn .35s ease both; }
+  a.card:nth-child(2) { animation-delay:.06s; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pock</h1>
+  <p class="tagline">Pocket tools — hors-ligne, données dans le navigateur</p>
+
+  <div class="section-label">Rando</div>
+  <div class="cards">
+    <a class="card" href="covoiturage-rando.html">
+      <div class="card-icon" aria-hidden="true">🥾</div>
+      <div class="card-name">Covoiturage Rando</div>
+      <div class="card-detail">Calcul des frais de covoiturage · 0.30€/km · Historique sauvegardé</div>
+    </a>
+  </div>
+
+  <div class="section-label">Véhicules</div>
+  <div class="cards">
+    <a class="card" href="suivi-km-loa.html">
+      <div class="card-dots" aria-hidden="true"><span style="background:#3563e9"></span><span style="background:#00796b"></span><span style="background:#d97706"></span></div>
+      <div class="card-name">Suivi km LOA</div>
+      <div class="card-detail">Véhicules d'exemple pré-configurés · Ajoutez vos véhicules · Graphique, écarts, relevés</div>
+    </a>
+  </div>
+
+  <div class="section-label">Lecture</div>
+  <div class="cards">
+    <a class="card" href="bibliotheque.html">
+      <div class="card-icon" aria-hidden="true">📚</div>
+      <div class="card-name">Ma Bibliothèque</div>
+      <div class="card-detail">Suivi de lectures, réservations et emprunts · Import rapide · Filtres par statut</div>
+    </a>
+  </div>
+
+  <div class="section-label">Données</div>
+  <button class="data-toggle" id="dataToggle" aria-expanded="false" aria-controls="dataPanel">
+    💾 Sauvegarder ou restaurer mes données
+  </button>
+  <div class="data-panel" id="dataPanel" hidden>
+    <h3>Export</h3>
+    <p>Télécharge un fichier JSON contenant toutes tes données (covoit, véhicules, relevés, livres). À conserver hors du navigateur.</p>
+    <div class="data-actions">
+      <button class="data-btn primary" id="btnExport">⬇ Télécharger l'export</button>
+    </div>
+    <h3 style="margin-top:16px">Import</h3>
+    <p>Restaure depuis un fichier <code>pock-backup-*.json</code>.</p>
+    <div class="data-mode">
+      <label><input type="radio" name="importMode" value="merge" checked> Fusionner</label>
+      <label><input type="radio" name="importMode" value="replace"> Remplacer tout</label>
+    </div>
+    <div class="data-actions" style="margin-top:10px">
+      <input type="file" id="fileInput" accept="application/json,.json" style="display:none">
+      <button class="data-btn" id="btnImport">⬆ Choisir un fichier</button>
+    </div>
+    <div id="dataMsg"></div>
+  </div>
+
+  <div class="footer">Pock · Données stockées localement</div>
+</div>
+<script src="common.js"></script>
+<script>
+  const toggle = document.getElementById('dataToggle');
+  const panel = document.getElementById('dataPanel');
+  toggle.addEventListener('click', () => {
+    const open = !panel.hasAttribute('hidden');
+    if (open) { panel.setAttribute('hidden', ''); toggle.setAttribute('aria-expanded', 'false'); }
+    else { panel.removeAttribute('hidden'); toggle.setAttribute('aria-expanded', 'true'); }
+  });
+
+  document.getElementById('btnExport').addEventListener('click', () => {
+    try {
+      pockExportToFile();
+      showMsg('Export téléchargé.', 'ok');
+    } catch (err) {
+      showMsg('Erreur : ' + err.message, 'err');
+    }
+  });
+
+  const fileInput = document.getElementById('fileInput');
+  document.getElementById('btnImport').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const mode = document.querySelector('input[name="importMode"]:checked').value;
+    const warning = mode === 'replace'
+      ? 'Remplacer TOUTES les données actuelles par celles du fichier ?\n(Données actuelles perdues définitivement)'
+      : 'Importer les données du fichier et les fusionner avec les données actuelles ?';
+    if (!confirm(warning)) { fileInput.value = ''; return; }
+    try {
+      const text = await file.text();
+      const count = pockImportFromJSON(text, mode);
+      showMsg('✓ ' + count + ' clé' + (count > 1 ? 's' : '') + ' importée' + (count > 1 ? 's' : '') + '. Recharge une app pour voir.', 'ok');
+    } catch (err) {
+      showMsg('Erreur : ' + err.message, 'err');
+    } finally {
+      fileInput.value = '';
+    }
+  });
+
+  function showMsg(text, kind) {
+    const el = document.getElementById('dataMsg');
+    el.className = 'data-msg ' + kind;
+    el.textContent = text;
+    if (kind === 'ok') setTimeout(() => { el.className = ''; el.textContent = ''; }, 5000);
+  }
+</script>
+</body>
+</html>
