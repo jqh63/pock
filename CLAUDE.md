@@ -114,6 +114,8 @@ Ces apps tournent sur Android, iOS et Chrome Windows 11 :
 
 Le code est public sur GitHub mais les données restent dans le localStorage de chaque navigateur, jamais partagées ni uploadées. Un export/import JSON manuel est dispo depuis le hub pour backup ou migration d'appareil.
 
+La roadmap, les décisions d'architecture et le contexte plus large vivent dans un repo `knowledge-base` privé de l'auteur. Ne pas le citer par URL ou chemin dans ce repo public — paraphraser ou résumer si une référence est nécessaire.
+
 ## État actuel
 
 - Service Worker : `pock-v14`
