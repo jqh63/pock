@@ -1,0 +1,24 @@
+# Secrets & credentials (prévention — aucun secret n'est utilisé aujourd'hui)
+.env
+.env.*
+*.pem
+*.key
+*.crt
+.git-credentials
+.netrc
+
+# Node (au cas où ajout futur de build/tooling)
+node_modules/
+package-lock.json
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
