@@ -1,4 +1,10 @@
-# Hygiène préventive — patterns secrets à ne jamais lire.
+# Hygiène préventive — patterns secrets à ne jamais lire. Défense en profondeur.
+#
+# ⚠️ NON enforced par le harness Claude Code (vérifié 2026-05-28). Le
+# blocage de lecture réel vit dans `.claude/settings.json` §
+# `permissions.deny` ("Read(...)"). Ce fichier reste comme doc d'intention
+# + filet si un outil tiers l'honore.
+#
 # Aucun de ces fichiers n'existe aujourd'hui dans le repo (le projet est
 # 100 % statique, pas de backend, pas de secrets par construction), mais
 # on les liste pour éviter la lecture accidentelle si un futur
