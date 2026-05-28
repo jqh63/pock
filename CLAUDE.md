@@ -79,6 +79,17 @@ chez les utilisateurs installés :
 Pas de staging — `main` est en production via GitHub Pages. Tester
 sur l'URL publique après merge.
 
+## Outillage .claude/
+
+Skills sur-mesure dans `.claude/skills/` :
+
+- **release-pwa** — bumper le marqueur visuel + la version `CACHE` du SW
+  pour déclencher l'auto-update PWA. À lancer à chaque release qui
+  change l'UX.
+- **smoke-test** — smoke test Playwright vérifiant que chaque app charge
+  proprement (pas d'erreur JS/console, titre attendu, rendu visible). À
+  lancer avant toute PR touchant le code d'une app.
+
 ## Scope volontairement limité
 
 - **Pas de framework JS, pas de build, pas de `package.json`.** Un
