@@ -21,9 +21,8 @@ python3 tests/smoke.py
 ```
 
 Sort en non-zéro si une app échoue (erreur JS non catchée, erreur console,
-titre manquant, rien de paintable). Playwright + Chromium sont préinstallés
-dans la sandbox code-server (`code-server/init/install-tooling.sh` côté
-knowledge-base).
+titre manquant, rien de paintable). Voir `tests/README.md` pour l'install
+de Playwright + Chromium.
 
 ## Interpréter
 
