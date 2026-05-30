@@ -24,11 +24,7 @@ Exits non-zero on any failure. Screenshots are written to
 
 ## One-shot environment install
 
-Requires Python 3.12+ (default in the code-server sandbox) plus
-Playwright with Chromium. Both are pre-installed in this user's
-sandbox via `code-server/init/install-tooling.sh`
-([knowledge-base](https://github.com/Jqh63/knowledge-base/blob/main/code-server/init/install-tooling.sh)).
-For a fresh clone elsewhere:
+Requires Python 3.12+ plus Playwright with Chromium:
 
 ```bash
 python3 -m pip install --user playwright
