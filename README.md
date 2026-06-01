@@ -13,7 +13,7 @@ Track mileage against your lease (LOA) allowance. Add your own vehicles, log odo
 - Pre-configured with two example vehicles
 - Add/remove vehicles with custom name, color, start date, duration, km/year, and excess cost/km
 - Dashboard: current km, delta vs expected, remaining budget per month
-- Cost projection with stability threshold (needs 2+ readings and 14+ days of data before projecting)
+- Cost projection with stability threshold (needs a single reading and 30+ days of contract before projecting; warns if the last reading is older than 60 days)
 - SVG chart: expected vs actual mileage curve
 - Contract status: not started, active, or ended
 - Reset entries while keeping vehicle config

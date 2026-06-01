@@ -73,8 +73,7 @@ Le service worker (`sw.js`) cache l'app. **Bumper la version `CACHE`
 à chaque release qui change l'UX** pour déclencher l'auto-update PWA
 chez les utilisateurs installés :
 
-- `index.html` (footer) : marqueur visuel `vX.Y`
-- `sw.js` : `const CACHE_NAME = 'pock-vX.Y'`
+- `sw.js` : `const CACHE_NAME = 'pock-vN'` — entier monotone, +1 à chaque release UX (v1 → v14…). Pas de marqueur de version dans le footer (le footer affiche `Pock · Données stockées localement`).
 
 Pas de staging — `main` est en production via GitHub Pages. Tester
 sur l'URL publique après merge.
@@ -152,7 +151,7 @@ La roadmap, les décisions d'architecture et le contexte plus large vivent dans 
 - Tout rendu par JS vanilla (pas de React, Vue, etc.)
 - Pattern : un `render()` reconstruit tout l'HTML via `innerHTML` à chaque changement d'état
 
-## Arborescence du repo (13 fichiers à la racine)
+## Arborescence du repo (15 fichiers à la racine, hors dotfiles)
 
 ```
 index.html              ← Hub + panneau Export/Import · ordre : Rando → Véhicules → Lecture → Données
@@ -168,6 +167,8 @@ icon-512.png            ← Grande icône
 icon-maskable.png       ← Icône maskable avec safe zone
 apple-touch-icon.png    ← iOS écran d'accueil (180px)
 README.md               ← README public pour visiteurs GitHub
+LICENSE                 ← Licence du projet
+CLAUDE.md               ← Router instructions IA (ce fichier)
 ```
 
 ## Clés localStorage
@@ -254,7 +255,7 @@ Palette couleurs véhicules : `#3563e9`, `#00796b`, `#d97706`, `#9333ea`, `#dc26
 ## Service Worker
 
 ```
-const CACHE_NAME = 'pock-v13';  // bumper à chaque changement d'assets
+const CACHE_NAME = 'pock-v14';  // bumper à chaque changement d'assets
 ```
 
 - Stratégie : cache-first, fallback réseau
