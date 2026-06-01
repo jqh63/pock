@@ -177,6 +177,7 @@ function doCalc() {
   if (hasInvalid) { errorMsg = "Les champs doivent contenir uniquement des nombres"; result = null; render(); return; }
   const k = parseInt(formKm)||0, p = parseInt(formPart)||0, d = parseInt(formDriv)||0;
   if (!k || !p || !d) { errorMsg = "Remplis tous les champs"; result = null; render(); return; }
+  if (k < 1 || p < 1 || d < 1) { errorMsg = "Les valeurs doivent être supérieures à 0"; result = null; render(); return; }
   if (p < d) { errorMsg = "Il ne peut pas y avoir plus de voitures que de participants"; result = null; render(); return; }
   errorMsg = "";
   result = calc(k, p, d);

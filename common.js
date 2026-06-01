@@ -14,10 +14,15 @@ function genId() {
 
 // Service worker registration with reload-loop guard
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  // hadController : skip the very first install (no prior controller) — sinon
+  // clients.claim() au premier chargement émet controllerchange et déclenche
+  // un reload en plein démarrage. updateViaCache:'none' : ne pas servir un
+  // sw.js périmé depuis le cache HTTP (sinon le bump CACHE peut tarder).
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
+    if (refreshing || !hadController) return;
     refreshing = true;
     window.location.reload();
   });

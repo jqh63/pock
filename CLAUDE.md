@@ -128,7 +128,7 @@ La roadmap, les décisions d'architecture et le contexte plus large vivent dans 
 
 ## État actuel
 
-- Service Worker : `pock-v14`
+- Service Worker : `pock-v15`
 - 3 apps live : covoiturage-rando, suivi-km-loa, bibliotheque
 - Panneau Export/Import sur le hub (JSON, mode fusion ou remplacement)
 - PWA complète (manifest, icônes PNG, auto-update via `controllerchange` avec garde anti-boucle)
@@ -255,7 +255,7 @@ Palette couleurs véhicules : `#3563e9`, `#00796b`, `#d97706`, `#9333ea`, `#dc26
 ## Service Worker
 
 ```
-const CACHE_NAME = 'pock-v14';  // bumper à chaque changement d'assets
+const CACHE_NAME = 'pock-v15';  // bumper à chaque changement d'assets
 ```
 
 - Stratégie : cache-first, fallback réseau

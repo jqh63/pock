@@ -251,7 +251,12 @@ function render() {
   const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
   const currentKm = latest ? latest.km : 0;
   const kmProgress = (currentKm / C.totalKm) * 100;
-  const expectedKm = Math.round(C.kmPerDay * daysElapsed);
+  // Plafonner la base temporelle du « prévu » à la durée du contrat : après la
+  // fin, daysElapsed dépasse totalDays et expectedKm grimperait au-delà du
+  // forfait, rendant l'« écart vs prévu » artificiellement favorable (le chart
+  // plafonne déjà son équivalent).
+  const expElapsed = Math.min(daysElapsed, totalDays);
+  const expectedKm = Math.round(C.kmPerDay * expElapsed);
   const delta = currentKm - expectedKm;
   const dt = deltaText(delta);
   const monthsRemaining = Math.max(0, Math.ceil((C.end - now) / (864e5 * 30.44)));
