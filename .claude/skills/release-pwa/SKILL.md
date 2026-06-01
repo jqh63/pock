@@ -1,7 +1,7 @@
 ---
 name: release-pwa
-description: Publier une version de Pock — bumper le marqueur visuel et la version CACHE du service worker pour déclencher l'auto-update PWA chez les utilisateurs installés. À utiliser à chaque release qui change l'UX. Oublier le bump CACHE = clients installés bloqués sur l'ancienne version.
-argument-hint: "[X.Y - ce qui change]"
+description: Publier une version de Pock — bumper la version CACHE du service worker (entier pock-vN) pour déclencher l'auto-update PWA chez les utilisateurs installés. À utiliser à chaque release qui change l'UX. Oublier le bump CACHE = clients installés bloqués sur l'ancienne version.
+argument-hint: "[N - ce qui change]"
 ---
 
 # Publier une version Pock
@@ -14,12 +14,11 @@ la version `CACHE` est bumpée. Cf. CLAUDE.md § *Versioning et propagation*.
 
 ## Étapes
 
-1. **Bumper les deux marqueurs** (les garder synchrones) :
-   - `index.html` (footer) → marqueur visuel `vX.Y`
-   - `sw.js` → `const CACHE_NAME = 'pock-vX.Y'`
+1. **Bumper la version CACHE du service worker** :
+   - `sw.js` → `const CACHE_NAME = 'pock-vN'` (entier monotone, +1 par release UX ;
+     v1 → v14…). Pas de marqueur de version dans le footer.
    ```bash
    grep -n "CACHE_NAME" sw.js
-   grep -nE 'v[0-9]+\.[0-9]+' index.html | head
    ```
 
 2. **Bumper à chaque release qui change l'UX.** Un changement doc-only ne
@@ -36,7 +35,7 @@ la version `CACHE` est bumpée. Cf. CLAUDE.md § *Versioning et propagation*.
    squash).
 
 5. **Vérifier après merge** sur l'URL publique (pas de staging) : hard-reload,
-   confirmer le nouveau marqueur de version, et qu'un client installé se met à
+   confirmer la nouvelle version CACHE du SW (devtools → Application), et qu'un client installé se met à
    jour. Avant la PR, passer `/smoke-test` (les 4 apps doivent charger propre).
 
 ## Garde-fou
