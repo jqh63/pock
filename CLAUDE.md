@@ -9,10 +9,11 @@
 1. **Aucune donnée personnelle dans le code ou les commits.** Pas de
    vraie adresse email, pas de nom complet, pas de données financières
    ou d'historique perso en exemple. Les données utilisateur vivent
-   uniquement dans le `localStorage` du navigateur.
-2. **Aucun secret** (token, API key, password) dans le code — par
-   construction le projet n'en a pas besoin. Toute feature qui en
-   exigerait est hors scope (cf. *Scope volontairement limité*).
+   dans le `localStorage` du navigateur (+ copie serveur perso si la
+   sync opt-in est activée, cf. `sync/README.md`).
+2. **Aucun secret** (token, API key, password) dans le code. Le token
+   de sync n'apparaît jamais dans le repo : généré côté serveur, saisi
+   manuellement par appareil (cf. *Sync*).
 3. **Pas de force-push.** Jamais.
 4. **Identité git noreply** configurée localement :
    `Jqh63 <12471916+Jqh63@users.noreply.github.com>`. Jamais d'email
@@ -93,10 +94,13 @@ Skills sur-mesure dans `.claude/skills/` :
 
 - **Pas de framework JS, pas de build, pas de `package.json`.** Un
   fichier HTML par app = portabilité maximale et audit visuel facile.
-- **Pas de tracking, pas de cookies, pas de backend.**
-- Si une feature exige un backend (relais HTTP→UDP, sync cloud,
-  notifications push avec serveur), créer un **repo séparé** pour le
-  service — ne pas mélanger backend et PWA dans ce repo.
+- **Pas de tracking, pas de cookies, pas de backend par défaut.**
+  Exception scoped actée (2026-06-11) : la **sync opt-in** vers un
+  serveur personnel — le mini blob store vit dans `sync/` de ce repo
+  (couplé à la PWA, pattern miroir du relais WoL de `plex-jqh-omv`).
+  Sans configuration par l'utilisateur, rien n'est jamais envoyé.
+- Toute autre feature exigeant un backend (relais HTTP→UDP,
+  notifications push avec serveur) → **repo séparé**.
 
 ## En cas de doute
 
@@ -128,12 +132,19 @@ La roadmap, les décisions d'architecture et le contexte plus large vivent dans 
 
 ## État actuel
 
-- Service Worker : `pock-v15`
+- Service Worker : `pock-v16`
 - 3 apps live : covoiturage-rando, suivi-km-loa, bibliotheque
 - Panneau Export/Import sur le hub (JSON, mode fusion ou remplacement)
+- **Sync opt-in** (v16) : couche dans `common.js` + config sur le hub
+  (URL + token Bearer) vers le blob store `sync/` self-hébergé. Pull au
+  chargement, push debounced 1,5 s (flush `keepalive` quand l'onglet
+  passe en arrière-plan), last-write-wins par app (`updatedAt`), reload
+  unique gardé par sessionStorage si le serveur est plus récent. Hook
+  `Storage.prototype.setItem/removeItem` (filtré localStorage + préfixes
+  d'app) : tout point de sauvegarde est couvert sans câblage par app.
 - PWA complète (manifest, icônes PNG, auto-update via `controllerchange` avec garde anti-boucle)
 - Structure à plat : tous les fichiers à la racine du repo
-- Base partagée : `common.css` (reset, tokens, focus, fade) + `common.js` (esc, genId, SW reg, export/import)
+- Base partagée : `common.css` (reset, tokens, focus, fade) + `common.js` (esc, genId, SW reg, export/import, sync)
 - Polices 100 % système (`-apple-system`, `ui-monospace`, `Georgia`) — plus de Google Fonts, plus de dépendance réseau
 - Inputs à 16px minimum (iOS Safari auto-zoom prevention)
 - Match exact dans le SW (plus d'`ignoreSearch`, toutes les URLs sont internes donc déterministes)
@@ -159,7 +170,8 @@ covoiturage-rando.html  ← Calculateur covoiturage (0,30€/km)
 suivi-km-loa.html       ← Tracker km LOA (multi-véhicules)
 bibliotheque.html       ← Suivi de livres
 common.css              ← Reset, tokens, stacks polices système, .pock-back, focus, fade
-common.js               ← esc, genId, enregistrement SW, pockExport/pockImport
+common.js               ← esc, genId, enregistrement SW, pockExport/pockImport, sync
+sync/                   ← Blob store de sync self-hébergé (FastAPI) — app.py, unit systemd, env.example, README
 manifest.json           ← Manifest PWA (name: Pock)
 sw.js                   ← Service worker (cache-first, match exact)
 icon-192.png            ← Icône standard
@@ -178,6 +190,7 @@ CLAUDE.md               ← Router instructions IA (ce fichier)
 - `pock-km-active` — id du dernier véhicule sélectionné
 - `pock-covoit-history` — historique covoiturage (20 derniers calculs)
 - `pock-biblio-books` — collection de livres : `[{id, title, author, note, status, addedAt}]` — à l'import en masse, `addedAt` est staggéré (`base + index`) pour un tri date stable
+- `pock-sync-url` / `pock-sync-token` / `pock-sync-meta` — config sync + timestamps last-write par app (uniquement si la sync est activée). Ces clés ne matchent aucun préfixe d'app → jamais incluses dans les blobs poussés (mais incluses dans l'export JSON `pock-*` du hub)
 
 ## Export / Import
 
@@ -352,6 +365,7 @@ if ('serviceWorker' in navigator) {
   - match SW exact (plus d'`ignoreSearch`) + `resp.type === 'basic'` avant cache
   - garde anti-boucle sur `controllerchange` (flag `refreshing`)
   - contraste `--text3` renforcé (`#94a1b2` → `#7a889a`) pour lisibilité AA du petit texte
+- v16 : sync cross-device opt-in (serveur `sync/` + couche client `common.js` + config hub)
 - v14 : assouplissement de la règle de projection km
   - seuil sur le nombre de relevés retiré (un seul relevé suffit)
   - seuil sur l'âge du contrat passé de 14 à 30 jours
