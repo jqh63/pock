@@ -40,20 +40,26 @@ Conflict resolution is client-side last-write-wins per app, using
 
 ## Deploy (mirror of the WoL relay procedure)
 
-As root on the VM:
+**One-shot bootstrap** (first install / DR) — as root on the VM, from a
+copy of this `sync/` directory:
 
 ```bash
-useradd --system --home /opt/pock-sync --shell /usr/sbin/nologin pock
-mkdir -p /opt/pock-sync /var/lib/pock-sync
-chown pock:pock /var/lib/pock-sync && chmod 700 /var/lib/pock-sync
-python3 -m venv /opt/pock-sync/venv
-/opt/pock-sync/venv/bin/pip install fastapi 'uvicorn[standard]'
-# copy app.py to /opt/pock-sync/app.py (via the existing deploy channel)
-install -m 0600 pock-sync.env.example /etc/pock-sync.env
-# edit /etc/pock-sync.env: POCK_SYNC_TOKEN=$(openssl rand -hex 32)
-cp pock-sync.service /etc/systemd/system/
-systemctl daemon-reload && systemctl enable --now pock-sync
-curl -s localhost:8001/pock/health   # → {"status":"ok"}
+sudo bash sync/bootstrap-pock-sync.sh
+```
+
+Creates the `pock` system user, dirs (`/var/lib/pock-sync` 700), venv
+(fastapi + uvicorn), generates the token into `/etc/pock-sync.env`
+(0600, never overwritten on re-run), installs app + unit, enables the
+service, and curls `/pock/health`.
+
+**Day-2 updates** — from the deploying host, through the existing
+forced-command channel (`wol-relay-deploy` alias, dispatch whitelist
+extended with the `pock-sync-*` verbs — see the relay repo):
+
+```bash
+bash sync/deploy.sh        # push app.py + unit, apply, status
+ssh wol-relay-deploy pock-sync-status
+ssh wol-relay-deploy logs-pock-sync
 ```
 
 ### Caddy (existing site block of the relay domain)
