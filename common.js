@@ -61,6 +61,169 @@ function pockExportToFile() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// ---------- Sync (opt-in) — cf. sync/README.md ----------
+// One JSON blob per app on a personal server (Bearer token, configured
+// from the hub). localStorage stays the source for the UI and offline:
+// pull on load, debounced push on change, last-write-wins per app.
+// Without pock-sync-url + pock-sync-token configured, nothing runs.
+
+const POCK_SYNC_APPS = { km: 'pock-km-', covoit: 'pock-covoit-', biblio: 'pock-biblio-' };
+const POCK_SYNC_DEBOUNCE_MS = 1500;
+let pockSyncApplying = false;
+const pockSyncTimers = {};
+
+function pockSyncConfig() {
+  const url = localStorage.getItem('pock-sync-url');
+  const token = localStorage.getItem('pock-sync-token');
+  if (!url || !token) return null;
+  return { url: url.replace(/\/+$/, ''), token: token };
+}
+
+function pockSyncMeta() {
+  try { return JSON.parse(localStorage.getItem('pock-sync-meta')) || {}; }
+  catch (_) { return {}; }
+}
+
+function pockSyncAppFor(key) {
+  for (const app in POCK_SYNC_APPS) {
+    if (key.indexOf(POCK_SYNC_APPS[app]) === 0) return app;
+  }
+  return null;
+}
+
+function pockSyncCollect(app) {
+  const prefix = POCK_SYNC_APPS[app];
+  const data = {};
+  pockListKeys().forEach(k => {
+    if (k.indexOf(prefix) === 0) data[k] = localStorage.getItem(k);
+  });
+  return data;
+}
+
+function pockSyncRequest(cfg, method, app, body, keepalive) {
+  const opts = {
+    method: method,
+    headers: { 'Authorization': 'Bearer ' + cfg.token },
+    keepalive: !!keepalive
+  };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  return fetch(cfg.url + '/pock/' + app, opts);
+}
+
+function pockSyncPush(app, keepalive) {
+  const cfg = pockSyncConfig();
+  if (!cfg) return Promise.resolve();
+  const blob = { version: 1, updatedAt: pockSyncMeta()[app] || Date.now(), data: pockSyncCollect(app) };
+  return pockSyncRequest(cfg, 'PUT', app, blob, keepalive)
+    .catch(() => { /* offline / serveur down : sync différée, re-push au prochain load */ });
+}
+
+function pockSyncMarkDirty(app) {
+  if (pockSyncApplying || !pockSyncConfig()) return;
+  const meta = pockSyncMeta();
+  meta[app] = Date.now();
+  localStorage.setItem('pock-sync-meta', JSON.stringify(meta));
+  clearTimeout(pockSyncTimers[app]);
+  pockSyncTimers[app] = setTimeout(() => {
+    pockSyncTimers[app] = null;
+    pockSyncPush(app);
+  }, POCK_SYNC_DEBOUNCE_MS);
+}
+
+// Hook every localStorage write so any save path in any app marks its
+// group dirty — no per-app wiring, new save sites are covered for free.
+// Guard on `this` so sessionStorage is untouched.
+(function () {
+  const origSet = Storage.prototype.setItem;
+  const origRemove = Storage.prototype.removeItem;
+  Storage.prototype.setItem = function (k, v) {
+    origSet.call(this, k, v);
+    if (this === window.localStorage) {
+      const app = pockSyncAppFor(String(k));
+      if (app) pockSyncMarkDirty(app);
+    }
+  };
+  Storage.prototype.removeItem = function (k) {
+    origRemove.call(this, k);
+    if (this === window.localStorage) {
+      const app = pockSyncAppFor(String(k));
+      if (app) pockSyncMarkDirty(app);
+    }
+  };
+})();
+
+// Replace the local group keys with the remote ones. Returns true if
+// anything actually changed (drives the one-shot reload).
+function pockSyncApply(app, data) {
+  const current = pockSyncCollect(app);
+  if (JSON.stringify(current) === JSON.stringify(data)) return false;
+  pockSyncApplying = true;
+  try {
+    Object.keys(current).forEach(k => localStorage.removeItem(k));
+    Object.keys(data).forEach(k => {
+      if (typeof data[k] === 'string' && pockSyncAppFor(k) === app) localStorage.setItem(k, data[k]);
+    });
+  } finally {
+    pockSyncApplying = false;
+  }
+  return true;
+}
+
+async function pockSyncPullAll() {
+  const cfg = pockSyncConfig();
+  if (!cfg) return;
+  let changed = false;
+  for (const app in POCK_SYNC_APPS) {
+    try {
+      const resp = await pockSyncRequest(cfg, 'GET', app);
+      if (resp.status === 404) {
+        // Pas encore de blob serveur : pousser l'état local s'il existe
+        if (Object.keys(pockSyncCollect(app)).length) pockSyncMarkDirty(app);
+        continue;
+      }
+      if (!resp.ok) continue;
+      const blob = await resp.json();
+      const remoteAt = blob.updatedAt || 0;
+      const localAt = pockSyncMeta()[app] || 0;
+      if (remoteAt > localAt) {
+        if (pockSyncApply(app, blob.data || {})) changed = true;
+        const meta = pockSyncMeta();
+        meta[app] = remoteAt;
+        localStorage.setItem('pock-sync-meta', JSON.stringify(meta));
+      } else if (localAt > remoteAt) {
+        pockSyncMarkDirty(app);
+      }
+    } catch (_) { /* offline / serveur down : l'app reste 100 % fonctionnelle */ }
+  }
+  // Les apps rendent depuis localStorage au chargement : si le pull a
+  // appliqué des données plus récentes, un reload unique les affiche.
+  // Garde sessionStorage contre toute boucle.
+  if (changed && !sessionStorage.getItem('pock-sync-reloaded')) {
+    sessionStorage.setItem('pock-sync-reloaded', '1');
+    window.location.reload();
+  } else if (!changed) {
+    sessionStorage.removeItem('pock-sync-reloaded');
+  }
+}
+
+// Mobile usage = open, add an entry, close: flush pending pushes when
+// the tab goes hidden so the debounce can't swallow the last write.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden') return;
+  for (const app in pockSyncTimers) {
+    if (pockSyncTimers[app]) {
+      clearTimeout(pockSyncTimers[app]);
+      pockSyncTimers[app] = null;
+      pockSyncPush(app, true);
+    }
+  }
+});
+
+pockSyncPullAll();
+
 function pockImportFromJSON(json, mode) {
   mode = mode || 'merge'; // 'merge' | 'replace'
   let obj;

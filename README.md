@@ -2,7 +2,7 @@
 
 Pocket tools — lightweight personal web apps that run offline in any browser.
 
-No backend, no framework, no external dependencies. Just HTML/CSS/JS + system fonts.
+No framework, no external dependencies. Just HTML/CSS/JS + system fonts. No backend by default — with one scoped exception: an **opt-in sync** to a personal server you control (see [Data & Privacy](#data--privacy)).
 
 ## Apps
 
@@ -41,6 +41,10 @@ Calculate fair cost-sharing for group hiking carpools at €0.30/km. Handles mul
 
 From the hub, export all your Pock data to a single JSON file, or import back. Supports merge or replace modes. Useful for backup or switching devices.
 
+### 🔄 Sync (opt-in)
+
+From the hub, point Pock at a self-hosted [sync server](sync/README.md) (URL + Bearer token, entered once per device). Each app then keeps a server-side copy of its data: pull on load, debounced push on change, last-write-wins. localStorage stays the source for the UI and offline use — if the server is unreachable, everything keeps working and sync resumes later. Without configuration, nothing is ever sent anywhere.
+
 ## Install
 
 ### GitHub Pages
@@ -73,7 +77,8 @@ suivi-km-loa.html       ← Mileage tracker
 covoiturage-rando.html  ← Carpooling calculator
 bibliotheque.html       ← Book tracker
 common.css              ← Shared base styles (reset, tokens, focus)
-common.js               ← Shared helpers (esc, genId, SW reg, export/import)
+common.js               ← Shared helpers (esc, genId, SW reg, export/import, sync)
+sync/                   ← Optional self-hosted sync server (FastAPI blob store)
 manifest.json           ← PWA manifest
 sw.js                   ← Service worker (offline, cache-first)
 icon-192.png            ← Standard icon
@@ -84,7 +89,7 @@ apple-touch-icon.png    ← iOS home screen (180px)
 
 ## Data & Privacy
 
-All data stays in your browser's localStorage. Nothing is sent to any server.
+By default all data stays in your browser's localStorage and nothing is sent to any server. If you enable sync from the hub, data goes **only** to the server you configured yourself (see [sync/README.md](sync/README.md)) — never to any third party.
 
 Storage keys used:
 - `pock-km-vehicles` — vehicle configurations
@@ -92,6 +97,7 @@ Storage keys used:
 - `pock-km-active` — last selected vehicle
 - `pock-biblio-books` — book collection
 - `pock-covoit-history` — carpooling history
+- `pock-sync-url` / `pock-sync-token` / `pock-sync-meta` — sync config + per-app last-write timestamps (only when sync is enabled)
 
 ## License
 
