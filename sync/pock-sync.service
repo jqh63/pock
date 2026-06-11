@@ -1,0 +1,21 @@
+[Unit]
+Description=Pock Sync FastAPI (per-app JSON blob store)
+After=network.target
+
+[Service]
+Type=simple
+User=pock
+Group=pock
+WorkingDirectory=/opt/pock-sync
+EnvironmentFile=/etc/pock-sync.env
+ExecStart=/opt/pock-sync/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8001 --no-access-log
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/pock-sync
+
+[Install]
+WantedBy=multi-user.target

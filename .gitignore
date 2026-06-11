@@ -28,3 +28,7 @@ tests/screenshots/
 
 # Claude Code — allow-list perso (local, non versionnée)
 .claude/settings.local.json
+
+# Python (sync server)
+__pycache__/
+*.pyc

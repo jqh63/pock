@@ -43,6 +43,8 @@
   .data-msg.err { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
   .data-mode { display:flex; gap:6px; margin-top:8px; font-size:12px; color:var(--text2); }
   .data-mode label { display:flex; gap:4px; cursor:pointer; align-items:center; }
+  .data-input { width:100%; padding:10px 12px; font-size:16px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-family:var(--font-sans); margin-bottom:8px; }
+  .sync-status { font-size:12px; color:var(--text2); margin-bottom:10px; }
 
   .footer { text-align:center; font-size:10px; color:var(--text3); margin-top:20px; }
 
@@ -102,6 +104,17 @@
       <input type="file" id="fileInput" accept="application/json,.json" style="display:none">
       <button class="data-btn" id="btnImport">⬆ Choisir un fichier</button>
     </div>
+    <h3 style="margin-top:16px">Synchronisation</h3>
+    <p>Optionnelle. Copie serveur personnelle (URL + token fournis par l'administrateur du serveur) : tes données sont synchronisées entre appareils et survivent à un nettoyage du navigateur. Sans configuration, rien n'est jamais envoyé nulle part.</p>
+    <div class="sync-status" id="syncStatus"></div>
+    <label for="syncUrl" style="font-size:12px;color:var(--text2)">URL du serveur</label>
+    <input class="data-input" id="syncUrl" type="url" placeholder="https://exemple.duckdns.org" autocomplete="off">
+    <label for="syncToken" style="font-size:12px;color:var(--text2)">Token</label>
+    <input class="data-input" id="syncToken" type="password" placeholder="token" autocomplete="off">
+    <div class="data-actions">
+      <button class="data-btn primary" id="btnSyncEnable">Activer et tester</button>
+      <button class="data-btn" id="btnSyncDisable">Désactiver</button>
+    </div>
     <div id="dataMsg"></div>
   </div>
 
@@ -145,6 +158,44 @@
     } finally {
       fileInput.value = '';
     }
+  });
+
+  const syncUrl = document.getElementById('syncUrl');
+  const syncToken = document.getElementById('syncToken');
+  function refreshSyncStatus() {
+    const cfg = pockSyncConfig();
+    document.getElementById('syncStatus').textContent =
+      cfg ? 'Sync activée vers ' + cfg.url : 'Sync désactivée.';
+    if (cfg) syncUrl.value = cfg.url;
+  }
+  refreshSyncStatus();
+
+  document.getElementById('btnSyncEnable').addEventListener('click', async () => {
+    const url = syncUrl.value.trim().replace(/\/+$/, '');
+    const token = syncToken.value.trim();
+    if (!url || !token) { showMsg('URL et token requis.', 'err'); return; }
+    if (!/^https:\/\//.test(url)) { showMsg("L'URL doit être en https://", 'err'); return; }
+    try {
+      const resp = await fetch(url + '/pock/km', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (resp.status === 401) { showMsg('Token refusé par le serveur.', 'err'); return; }
+      if (!resp.ok && resp.status !== 404) { showMsg('Serveur injoignable (HTTP ' + resp.status + ').', 'err'); return; }
+    } catch (err) {
+      showMsg('Serveur injoignable : ' + err.message, 'err');
+      return;
+    }
+    localStorage.setItem('pock-sync-url', url);
+    localStorage.setItem('pock-sync-token', token);
+    syncToken.value = '';
+    refreshSyncStatus();
+    showMsg('✓ Sync activée. Récupération des données…', 'ok');
+    pockSyncPullAll();
+  });
+
+  document.getElementById('btnSyncDisable').addEventListener('click', () => {
+    localStorage.removeItem('pock-sync-url');
+    localStorage.removeItem('pock-sync-token');
+    refreshSyncStatus();
+    showMsg('Sync désactivée (données locales conservées).', 'ok');
   });
 
   function showMsg(text, kind) {
