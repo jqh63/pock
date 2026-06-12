@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pock-v16';
+const CACHE_NAME = 'pock-v17';
 const ASSETS = [
   './',
   './index.html',
@@ -14,9 +14,20 @@ const ASSETS = [
   './icon-maskable.png'
 ];
 
+// Précache par fichier (pas addAll) : un seul 404/timeout ne doit pas
+// faire échouer toute l'install. Request{cache:'reload'} force une
+// lecture réseau fraîche — sinon le cache HTTP du navigateur peut
+// servir une copie périmée d'un asset et la précacher dans le nouveau
+// CACHE, annulant l'effet du bump (acquis de la PWA WoL).
+function precache(c) {
+  return Promise.all(ASSETS.map(f =>
+    c.add(new Request(f, { cache: 'reload' })).catch(() => {})
+  ));
+}
+
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(precache).then(() => self.skipWaiting())
   );
 });
 
@@ -24,6 +35,12 @@ self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      // Self-heal : le navigateur peut évincer CacheStorage (pression
+      // stockage, nettoyage partiel) en gardant la registration — re-précache
+      // si le cache est vide. Le refill sur miss (fetch ci-dessous) couvre le
+      // reste de la vie du SW.
+      .then(() => caches.open(CACHE_NAME))
+      .then(c => c.keys().then(keys => keys.length ? null : precache(c)))
       .then(() => self.clients.claim())
   );
 });
@@ -33,7 +50,9 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
-      return fetch(e.request).then(resp => {
+      // cache:'reload' : sur miss, bypass du cache HTTP navigateur (copie
+      // potentiellement périmée) — on veut le réseau réel avant de re-cacher.
+      return fetch(e.request, { cache: 'reload' }).then(resp => {
         // Ne cacher que les réponses same-origin OK (évite les opaques cross-origin)
         if (resp && resp.status === 200 && resp.type === 'basic') {
           const clone = resp.clone();

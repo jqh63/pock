@@ -38,6 +38,23 @@ Blob format (written by the client, stored verbatim):
 Conflict resolution is client-side last-write-wins per app, using
 `updatedAt` (device clock, ms).
 
+## Sharing with another person (scoped tokens)
+
+Set `POCK_SYNC_SCOPED_TOKENS` in the env file (see `.env.example`):
+each extra token is limited to a list of apps and reads/writes the
+**same blobs** as the full token — that's the sharing. Example: a
+`<token>:km` entry given to a family member shares the vehicle
+tracking both ways, while their book list / carpool history stay
+local-only on their devices (the PWA degrades silently on 403, by
+construction of the client sync layer). The full token keeps access to
+everything.
+
+Trade-offs (accepted): conflicts stay last-write-wins per app — two
+near-simultaneous writes and the later one wins silently. Fine for
+spaced-out usage (monthly odometer readings); revisit with per-record
+merge if concurrent editing becomes real. No per-person private space
+*within* a shared app — that would need namespaced blobs.
+
 ## Deploy (mirror of the WoL relay procedure)
 
 **One-shot bootstrap** (first install / DR) — as root on the VM, from a

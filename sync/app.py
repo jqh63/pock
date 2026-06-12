@@ -32,6 +32,20 @@ from collections import defaultdict, deque
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 
 SHARED_TOKEN = os.environ["POCK_SYNC_TOKEN"]
+
+# Optional scoped tokens for sharing a subset of apps with another person
+# (e.g. shared vehicle tracking, private book list). Format, space-separated:
+#   POCK_SYNC_SCOPED_TOKENS="<token>:app1,app2 <token2>:app3"
+# A scoped token reads/writes ONLY its listed apps (same blobs as the full
+# token — that's the sharing); other apps answer 403. The full token keeps
+# access to everything. Conflicts stay last-write-wins per app: acceptable
+# because concurrent writes are rare in this usage (documented trade-off).
+SCOPED_TOKENS: dict[str, frozenset[str]] = {}
+for _entry in os.environ.get("POCK_SYNC_SCOPED_TOKENS", "").split():
+    _tok, _, _apps = _entry.partition(":")
+    if _tok and _apps:
+        SCOPED_TOKENS[_tok] = frozenset(a for a in _apps.split(",") if a)
+
 DATA_DIR = os.environ.get("POCK_SYNC_DATA_DIR", "/var/lib/pock-sync")
 MAX_BLOB_BYTES = int(os.environ.get("POCK_SYNC_MAX_BLOB_BYTES", str(256 * 1024)))
 
@@ -99,13 +113,26 @@ def check_access(request: Request, authorization: str | None, app_name: str) -> 
     if authorization and authorization.startswith("Bearer "):
         token = authorization[len("Bearer "):]
     # Identical response for absent and invalid token (no oracle), and
-    # constant-time comparison (no timing-based brute-force).
+    # constant-time comparison (no timing-based brute-force). Scoped tokens
+    # are checked the same way; iteration order leaks nothing useful (the
+    # set is tiny and every comparison is constant-time).
+    allowed_apps = None  # None = full access
     if not hmac.compare_digest(token, SHARED_TOKEN):
-        logger.warning("sync ip=%s status=401 reason=bad_token", ip)
-        raise HTTPException(status_code=401, detail="unauthorized")
+        for scoped, apps in SCOPED_TOKENS.items():
+            if hmac.compare_digest(token, scoped):
+                allowed_apps = apps
+                break
+        else:
+            logger.warning("sync ip=%s status=401 reason=bad_token", ip)
+            raise HTTPException(status_code=401, detail="unauthorized")
     if not APP_NAME_RE.match(app_name):
         logger.warning("sync ip=%s status=400 reason=bad_app_name", ip)
         raise HTTPException(status_code=400, detail="invalid app name")
+    # 403 (and not 401) is fine here: the caller has already proven a valid
+    # token, and the app name comes from its own URL — no oracle opened.
+    if allowed_apps is not None and app_name not in allowed_apps:
+        logger.warning("sync ip=%s app=%s status=403 reason=out_of_scope", ip, app_name)
+        raise HTTPException(status_code=403, detail="app not allowed for this token")
     return ip
 
 
