@@ -50,7 +50,10 @@
   .hint { font-size: 13px; color: var(--text3); margin-bottom: 10px; line-height: 1.5; }
 
   .controls { display: flex; gap: 10px; margin-bottom: 14px; }
-  .search-input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--surface); }
+  /* min-width: 0 — sans lui, la taille intrinsèque de l'input (placeholder)
+     empêche le rétrécissement et pousse le select de tri hors du viewport
+     (constaté ≤390px, fix 2026-06-12). */
+  .search-input { flex: 1; min-width: 0; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--surface); }
   .sort-select { width: 140px; font-size: 16px; padding: 10px 8px; }
 
   .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
