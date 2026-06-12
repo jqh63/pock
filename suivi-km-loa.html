@@ -73,7 +73,10 @@
 
   /* Quick add */
   .quick-add { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
-  .quick-add .qa-field { flex: 1; }
+  /* min-width: 0 — sans lui, la taille intrinsèque de l'input date empêche
+     le champ de rétrécir et pousse le bouton + Ajouter hors de la tuile
+     (constaté ≤390px, fix 2026-06-12). */
+  .quick-add .qa-field { flex: 1; min-width: 0; }
   .quick-add .qa-field label { display: block; font-size: 10px; font-weight: 600; color: var(--text3); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
   .quick-add .qa-field input { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 16px; font-family: var(--font-mono); background: var(--bg); color: var(--text); }
   .quick-add .qa-btn { padding: 9px 18px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); white-space: nowrap; flex-shrink: 0; }
