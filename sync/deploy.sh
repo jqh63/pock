@@ -31,9 +31,14 @@ echo "[deploy] apply-pock-sync ..."
 ssh "$ALIAS" apply-pock-sync
 
 echo "[deploy] status ..."
-if ssh "$ALIAS" pock-sync-status; then
-  echo "[deploy] DONE — pock-sync restarted, /pock/health OK"
-else
-  echo "[deploy] WARN — status KO post-restart, investigate VM side (logs-pock-sync)" >&2
-  exit 2
-fi
+# Retry: on the e2-micro, uvicorn takes a few seconds to bind after the
+# restart — a 0-delay probe gives a false-negative WARN on every deploy.
+for attempt in 1 2 3; do
+  if ssh "$ALIAS" pock-sync-status; then
+    echo "[deploy] DONE — pock-sync restarted, /pock/health OK"
+    exit 0
+  fi
+  [ "$attempt" -lt 3 ] && { echo "[deploy] not ready, retry ${attempt}/3 in 5s ..."; sleep 5; }
+done
+echo "[deploy] WARN — status KO post-restart, investigate VM side (logs-pock-sync)" >&2
+exit 2
