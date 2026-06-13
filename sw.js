@@ -9,11 +9,11 @@ const ASSETS = [
   './common.css',
   './common.js',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './apple-touch-icon.png',
-  './icon-maskable.png',
-  './icon-monochrome.png'
+  './icon-192-v2.png',
+  './icon-512-v2.png',
+  './apple-touch-icon-v2.png',
+  './icon-maskable-v2.png',
+  './icon-monochrome-v2.png'
 ];
 
 // Précache par fichier (pas addAll) : un seul 404/timeout ne doit pas
