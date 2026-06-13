@@ -68,7 +68,33 @@ function pockExportToFile() {
 // Without pock-sync-url + pock-sync-token configured, nothing runs.
 
 const POCK_SYNC_APPS = { km: 'pock-km-', covoit: 'pock-covoit-', biblio: 'pock-biblio-', hta: 'pock-hta-' };
+// Apps PRIVÉES (par-appareil) : leur blob serveur est suffixé d'un id d'appareil
+// aléatoire stable → chaque appareil a son propre blob, jamais partagé entre
+// users/devices, mais toujours sauvegardé (le dump serveur ramasse tout). Les
+// apps absentes d'ici sont PARTAGÉES : un seul blob commun à tous (km/covoit/
+// biblio). HTA = santé, propre à l'appareil de saisie. Un seul token suffit :
+// le cloisonnement vient du nom de blob, pas du scope du token.
+const POCK_SYNC_PRIVATE = { hta: true };
 const POCK_SYNC_DEBOUNCE_MS = 1500;
+
+// Id d'appareil aléatoire stable (local, jamais synchronisé : la clé
+// 'pock-device' ne matche aucun préfixe d'app donc n'est ni collectée ni
+// écrasée par la sync).
+function pockDeviceId() {
+  let id = localStorage.getItem('pock-device');
+  if (!id) {
+    const a = new Uint8Array(6);
+    (self.crypto || window.crypto).getRandomValues(a);
+    id = Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+    localStorage.setItem('pock-device', id);
+  }
+  return id;
+}
+
+// Nom du blob serveur : suffixé de l'id d'appareil pour les apps privées.
+function pockSyncBlob(app) {
+  return POCK_SYNC_PRIVATE[app] ? app + '-' + pockDeviceId() : app;
+}
 let pockSyncApplying = false;
 const pockSyncTimers = {};
 
@@ -110,7 +136,7 @@ function pockSyncRequest(cfg, method, app, body, keepalive) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
-  return fetch(cfg.url + '/pock/' + app, opts);
+  return fetch(cfg.url + '/pock/' + pockSyncBlob(app), opts);
 }
 
 function pockSyncPush(app, keepalive) {
