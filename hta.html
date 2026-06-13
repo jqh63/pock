@@ -344,19 +344,37 @@ function scaleLegendHtml() {
     </div>`;
 }
 
+// Couleurs des 6 niveaux (mêmes teintes que les classes .lvN), pour le SVG.
+const LV_COLOR = ["#3f8da0", "#0d9668", "#a16207", "#b45309", "#c2410c", "#dc2626"];
+
 function chartHtml() {
   const pts = measures.slice().sort((a,b) => a.ts - b.ts).slice(-30);
   if (pts.length < 2) return "";
-  const W = Math.max(320, pts.length * 18), H = 150, pad = 24;
+  const W = Math.max(320, pts.length * 20), H = 150, pad = 24;
   const ymin = 50, ymax = 200;
   const x = (i) => pad + i * (W - 2*pad) / (pts.length - 1);
   const y = (v) => H - pad - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - 2*pad) / (ymax - ymin);
+  const slot = (W - 2*pad) / Math.max(1, pts.length - 1);
+
+  // Fonds verticaux : une bande teintée UNIQUEMENT quand la mesure est hors
+  // normale (lv 0 = hypotension, ou lv ≥ 3 = ≥ seuil HTA). Le niveau combine
+  // SYS et DIA (le pire des deux), donc le fond se déclenche si l'un OU l'autre
+  // décroche — c'est la prise en compte « paire » des deux valeurs.
+  const bands = pts.map((p, i) => {
+    const lv = bpLevel(p.sys, p.dia);
+    if (lv === 1 || lv === 2) return "";            // dans la normale → pas de fond
+    const w = slot * 0.92;
+    return `<rect x="${(x(i) - w/2).toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${H}" fill="${LV_COLOR[lv]}" opacity="0.14"/>`;
+  }).join("");
+
   const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
-  const thLine = (v, color) => `<line x1="${pad}" y1="${y(v)}" x2="${W-pad}" y2="${y(v)}" stroke="${color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>`;
+  const thLine = (v, lbl) => `<line x1="${pad}" y1="${y(v)}" x2="${W-pad}" y2="${y(v)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/><text x="${pad+2}" y="${(y(v)-3).toFixed(1)}" font-size="9" fill="#94a3b8">${lbl}</text>`;
+
   return `<div class="card"><div class="card-title">Évolution (30 dernières mesures)</div>
-    <div class="chart-legend"><span class="lg-sys">Systolique</span><span class="lg-dia">Diastolique</span></div>
-    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbe d'évolution de la tension">
-      ${thLine(TH_SYS, "var(--accent)")}${thLine(TH_DIA, "#3563e9")}
+    <div class="chart-legend"><span class="lg-sys">Systolique</span><span class="lg-dia">Diastolique</span><span style="color:var(--text3)">▮ fond = mesure hors normale</span></div>
+    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbe d'évolution de la tension avec fonds colorés hors normale">
+      ${bands}
+      ${thLine(TH_SYS, "135")}${thLine(TH_DIA, "85")}
       ${line("dia", "#3563e9")}${line("sys", "var(--accent)")}
     </svg></div></div>`;
 }
