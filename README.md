@@ -45,6 +45,13 @@ From the hub, export all your Pock data to a single JSON file, or import back. S
 
 From the hub, point Pock at a self-hosted [sync server](sync/README.md) (URL + Bearer token, entered once per device). Each app then keeps a server-side copy of its data: pull on load, debounced push on change, last-write-wins. localStorage stays the source for the UI and offline use — if the server is unreachable, everything keeps working and sync resumes later. Without configuration, nothing is ever sent anywhere.
 
+**Sharing model — per app, one token.** A single token enables both sync and backup; what gets shared is a property of the app, not the token:
+
+- **Shared apps** (`km`, `covoit`, `biblio`) — one common server blob per app, synced across **all users and devices** that use the token. Hand the token to a family member and you share these.
+- **Private apps** (`hta` — health data) — the server blob is suffixed with a random per-device id (`hta-<deviceId>`), so each device keeps its **own** blob: never synced to your other devices, never visible to others sharing the token, but still backed up (the server dump captures every blob). Isolation comes from the blob name, not a token scope.
+
+Caveat: this is privacy *by namespacing*, not cryptographic isolation — someone holding the token who also knew your random device id could craft a manual read. The client never does this and blob names aren't enumerable, so in practice a private app stays private; hard isolation would need its own token + server-side enforcement.
+
 ## Install
 
 ### GitHub Pages
@@ -97,7 +104,9 @@ Storage keys used:
 - `pock-km-active` — last selected vehicle
 - `pock-biblio-books` — book collection
 - `pock-covoit-history` — carpooling history
+- `pock-hta-measures` / `pock-hta-campaigns` — blood-pressure measures and cycles
 - `pock-sync-url` / `pock-sync-token` / `pock-sync-meta` — sync config + per-app last-write timestamps (only when sync is enabled)
+- `pock-device` — random per-device id used to namespace private-app blobs (`hta`); local only, never synced
 
 ## License
 
