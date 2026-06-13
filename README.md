@@ -19,6 +19,17 @@ Track mileage against your lease (LOA) allowance. Add your own vehicles, log odo
 - Reset entries while keeping vehicle config
 - All vehicle configs and readings stored in localStorage
 
+### 🩺 Tension
+
+Blood-pressure self-monitoring built around the HAS "rule of 3" cycle: 3 measures morning and evening over 3 consecutive days (18 total), averaged against the home self-measurement threshold (135/85 mmHg, vs 140/90 at the clinic).
+
+- Guided series: 3 chained measures with a timed rest/interval and screen wake-lock
+- Manual one-off measures alongside cycles
+- Verdict + 6-level classification (hypotension → severe HTA), colored scale, 30-measure trend chart
+- History: every measure listed individually in a collapsible section per finished cycle, with inline edit and per-measure delete (not just whole-cycle delete)
+- Doctor report: share/export a text summary of a cycle (average, verdict, the 18 measures detailed by day/slot) via the Web Share API, with clipboard + `.txt` download fallback
+- All measures and cycles stored in localStorage (private app — see Sync below)
+
 ### 📚 Ma Bibliothèque
 
 Track your reading list, library reservations, and borrowed books. Filter by status, search by title or author, import books in bulk.
