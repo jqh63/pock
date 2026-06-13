@@ -1,10 +1,11 @@
-const CACHE_NAME = 'pock-v18';
+const CACHE_NAME = 'pock-v19';
 const ASSETS = [
   './',
   './index.html',
   './suivi-km-loa.html',
   './covoiturage-rando.html',
   './bibliotheque.html',
+  './hta.html',
   './common.css',
   './common.js',
   './manifest.json',

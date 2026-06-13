@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tension — Pock</title>
+<meta name="description" content="Suivi de tension artérielle — automesure et cycle règle des 3 (matin/soir, 3 jours)">
+<meta name="theme-color" content="#1a2332">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tension">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<style>
+  :root {
+    --accent: #d64550;
+    --success: #0d9668; --success-bg: #ecfdf5; --success-border: #6ee7b7;
+    --danger: #e5393f; --danger-bg: #fef2f2; --danger-border: #fca5a5;
+    --warn-bg: #fff7ed; --warn-border: #fdba74; --warn-text: #b45309;
+  }
+  .app { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; }
+  .tagline { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; }
+
+  /* Saisie */
+  .measure-form { display: flex; gap: 8px; align-items: flex-end; }
+  .mf-field { flex: 1; min-width: 0; }
+  .mf-field label { display: block; font-size: 10px; font-weight: 600; color: var(--text3); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .mf-field input { width: 100%; padding: 10px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; font-family: var(--font-mono); text-align: center; background: var(--bg); color: var(--text); }
+  .mf-btn { flex-shrink: 0; padding: 10px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); white-space: nowrap; }
+  .mf-btn:hover { opacity: .88; }
+  .mf-hint { font-size: 11px; color: var(--text3); margin-top: 8px; }
+
+  /* Boutons génériques */
+  .btn { border: none; border-radius: 10px; padding: 11px 18px; font-size: 14px; font-weight: 600; font-family: var(--font-sans); cursor: pointer; transition: opacity .15s; }
+  .btn:hover { opacity: .88; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-full { width: 100%; }
+  .btn-outline { background: none; border: 1.5px solid var(--border); color: var(--text2); }
+  .btn-ghost { background: none; border: none; color: var(--text3); font-size: 13px; cursor: pointer; padding: 6px 4px; font-family: var(--font-sans); }
+  .btn-ghost:hover { color: var(--danger); }
+
+  /* Campagne */
+  .camp-meta { font-size: 12px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 14px; }
+  .day-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .day-row:first-of-type { border-top: none; }
+  .day-label { font-size: 12px; font-weight: 700; color: var(--text2); min-width: 84px; }
+  .slot { display: flex; align-items: center; gap: 5px; }
+  .slot-name { font-size: 11px; color: var(--text3); width: 42px; }
+  .dots { display: flex; gap: 4px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--border); }
+  .dot.on { background: var(--accent); border-color: var(--accent); }
+  .progress-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin: 4px 0 14px; }
+  .progress-bar > span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+
+  /* Verdict */
+  .verdict { border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .verdict.ok { background: var(--success-bg); border: 1px solid var(--success-border); }
+  .verdict.high { background: var(--danger-bg); border: 1px solid var(--danger-border); }
+  .verdict.partial { background: var(--warn-bg); border: 1px solid var(--warn-border); }
+  .verdict-val { font-size: 28px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; }
+  .verdict-val .unit { font-size: 13px; font-weight: 500; color: var(--text3); }
+  .verdict-label { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .verdict.ok .verdict-label { color: var(--success); }
+  .verdict.high .verdict-label { color: var(--danger); }
+  .verdict.partial .verdict-label { color: var(--warn-text); }
+  .verdict-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* Historique */
+  .hist-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); gap: 10px; }
+  .hist-item:first-child { border-top: none; }
+  .hist-main { font-family: var(--font-mono); font-size: 15px; font-weight: 600; }
+  .hist-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .pill.ok { background: var(--success-bg); color: var(--success); }
+  .pill.high { background: var(--danger-bg); color: var(--danger); }
+  .pill.free { background: var(--bg); color: var(--text3); }
+  .empty { text-align: center; color: var(--text3); font-size: 13px; padding: 18px 0; }
+
+  /* Chart */
+  .chart-wrap { overflow-x: auto; }
+  .chart-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+  .chart-legend span::before { content: ''; display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .lg-sys::before { background: var(--accent); }
+  .lg-dia::before { background: #3563e9; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script src="common.js"></script>
+<script>
+"use strict";
+
+// --- Stockage (clés préfixées pock-hta- → sync auto par common.js) ---------
+const MEASURES_KEY = "pock-hta-measures";
+const CAMPAIGNS_KEY = "pock-hta-campaigns";
+
+// Seuil automesure HAS/SFHTA : HTA si moyenne ≥ 135/85 mmHg (vs 140/90 cabinet).
+const TH_SYS = 135, TH_DIA = 85;
+const PER_SLOT = 3;      // 3 mesures par demi-journée
+const DAYS = 3;          // sur 3 jours
+const TOTAL = DAYS * 2 * PER_SLOT;  // 18
+
+function load(key) { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } }
+function save(key, v) { localStorage.setItem(key, JSON.stringify(v)); }
+
+let measures = load(MEASURES_KEY);    // {id, ts, sys, dia, pulse, campaignId|null}
+let campaigns = load(CAMPAIGNS_KEY);  // {id, startedAt, endedAt|null}
+
+function saveMeasures() { save(MEASURES_KEY, measures); }
+function saveCampaigns() { save(CAMPAIGNS_KEY, campaigns); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function activeCampaign() { return campaigns.find(c => !c.endedAt) || null; }
+function slotOf(ts) { return new Date(ts).getHours() < 12 ? "morning" : "evening"; }
+function dayKey(ts) { const d = new Date(ts); return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate(); }
+function fmtDate(ts) { return new Date(ts).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }); }
+function fmtTime(ts) { return new Date(ts).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); }
+
+function campMeasures(cid) { return measures.filter(m => m.campaignId === cid).sort((a,b) => a.ts - b.ts); }
+function mean(arr) { return arr.length ? Math.round(arr.reduce((s,x) => s+x, 0) / arr.length) : 0; }
+
+// Moyenne + verdict d'une campagne sur ses mesures.
+function campStats(cid) {
+  const ms = campMeasures(cid);
+  if (!ms.length) return null;
+  const sys = mean(ms.map(m => m.sys)), dia = mean(ms.map(m => m.dia)), pulse = mean(ms.map(m => m.pulse).filter(Boolean));
+  const high = sys >= TH_SYS || dia >= TH_DIA;
+  return { sys, dia, pulse, high, count: ms.length, complete: ms.length >= TOTAL };
+}
+
+// --- Actions ---------------------------------------------------------------
+function addMeasure(campaignId) {
+  const sys = parseInt(document.getElementById("inSys").value, 10);
+  const dia = parseInt(document.getElementById("inDia").value, 10);
+  const pulse = parseInt(document.getElementById("inPulse").value, 10) || null;
+  if (!(sys >= 50 && sys <= 300) || !(dia >= 30 && dia <= 200)) {
+    alert("Valeurs invalides — vérifie SYS (50-300) et DIA (30-200)."); return;
+  }
+  measures.push({ id: uid(), ts: Date.now(), sys, dia, pulse, campaignId: campaignId || null });
+  saveMeasures();
+  render();
+}
+function startCampaign() {
+  campaigns.push({ id: uid(), startedAt: Date.now(), endedAt: null });
+  saveCampaigns();
+  render();
+}
+function endCampaign(cid) {
+  const ms = campMeasures(cid);
+  if (ms.length < TOTAL && !confirm(`Cycle incomplet (${ms.length}/${TOTAL} mesures). Le terminer quand même ? La moyenne sera calculée sur les mesures saisies.`)) return;
+  const c = campaigns.find(c => c.id === cid); if (c) { c.endedAt = Date.now(); saveCampaigns(); }
+  render();
+}
+function deleteMeasure(id) {
+  measures = measures.filter(m => m.id !== id); saveMeasures(); render();
+}
+function deleteCampaign(cid) {
+  if (!confirm("Supprimer ce cycle et ses mesures ?")) return;
+  measures = measures.filter(m => m.campaignId !== cid);
+  campaigns = campaigns.filter(c => c.id !== cid);
+  saveMeasures(); saveCampaigns(); render();
+}
+
+// --- Rendu -----------------------------------------------------------------
+function measureFormHtml(campaignId) {
+  const cid = campaignId ? `'${campaignId}'` : "null";
+  return `<div class="measure-form">
+      <div class="mf-field"><label for="inSys">SYS</label><input id="inSys" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="—"></div>
+      <div class="mf-field"><label for="inDia">DIA</label><input id="inDia" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="—"></div>
+      <div class="mf-field"><label for="inPulse">Pouls</label><input id="inPulse" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="—" onkeydown="if(event.key==='Enter')addMeasure(${cid})"></div>
+      <button class="mf-btn" onclick="addMeasure(${cid})">+ Ajouter</button>
+    </div>
+    <div class="mf-hint">Horodatage automatique · ${new Date().getHours() < 12 ? "série du matin" : "série du soir"} · au repos, assis depuis 5 min</div>`;
+}
+
+function dayGridHtml(cid) {
+  const ms = campMeasures(cid);
+  const days = [...new Set(ms.map(m => dayKey(m.ts)))].slice(0, DAYS);
+  if (!days.length) return `<p class="empty">Aucune mesure encore. Ajoute ta première série du matin.</p>`;
+  const dots = (n) => Array.from({length: PER_SLOT}, (_, i) => `<span class="dot ${i < n ? "on" : ""}"></span>`).join("");
+  return days.map((dk, i) => {
+    const dms = ms.filter(m => dayKey(m.ts) === dk);
+    const morn = dms.filter(m => slotOf(m.ts) === "morning").length;
+    const eve = dms.filter(m => slotOf(m.ts) === "evening").length;
+    const label = fmtDate(dms[0].ts);
+    return `<div class="day-row">
+      <span class="day-label">J${i+1} · ${label}</span>
+      <span class="slot"><span class="slot-name">Matin</span><span class="dots">${dots(Math.min(morn,PER_SLOT))}</span></span>
+      <span class="slot"><span class="slot-name">Soir</span><span class="dots">${dots(Math.min(eve,PER_SLOT))}</span></span>
+    </div>`;
+  }).join("");
+}
+
+function verdictHtml(st, complete) {
+  const cls = st.high ? "high" : "ok";
+  const wrapCls = complete ? cls : "partial";
+  const label = st.high ? `Tension élevée (≥ ${TH_SYS}/${TH_DIA})` : `Tension normale (< ${TH_SYS}/${TH_DIA})`;
+  const sub = complete ? `Moyenne sur ${st.count} mesures` : `Cycle incomplet — moyenne sur ${st.count}/${TOTAL} mesures`;
+  return `<div class="verdict ${wrapCls}">
+      <div class="verdict-val">${st.sys}/${st.dia} <span class="unit">mmHg</span>${st.pulse ? ` · ${st.pulse} <span class="unit">bpm</span>` : ""}</div>
+      <div class="verdict-label">${complete ? label : "Résultat partiel · " + label}</div>
+      <div class="verdict-sub">${sub} · seuil automesure HAS</div>
+    </div>`;
+}
+
+function chartHtml() {
+  const pts = measures.slice().sort((a,b) => a.ts - b.ts).slice(-30);
+  if (pts.length < 2) return "";
+  const W = Math.max(320, pts.length * 18), H = 150, pad = 24;
+  const ymin = 50, ymax = 200;
+  const x = (i) => pad + i * (W - 2*pad) / (pts.length - 1);
+  const y = (v) => H - pad - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - 2*pad) / (ymax - ymin);
+  const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
+  const thLine = (v, color) => `<line x1="${pad}" y1="${y(v)}" x2="${W-pad}" y2="${y(v)}" stroke="${color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>`;
+  return `<div class="card"><div class="card-title">Évolution (30 dernières mesures)</div>
+    <div class="chart-legend"><span class="lg-sys">Systolique</span><span class="lg-dia">Diastolique</span></div>
+    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbe d'évolution de la tension">
+      ${thLine(TH_SYS, "var(--accent)")}${thLine(TH_DIA, "#3563e9")}
+      ${line("dia", "#3563e9")}${line("sys", "var(--accent)")}
+    </svg></div></div>`;
+}
+
+function render() {
+  const ac = activeCampaign();
+  let html = `<div class="top"><h1>Tension</h1></div>
+    <p class="tagline">Automesure · cycle « règle des 3 » matin/soir sur 3 jours</p>`;
+
+  if (ac) {
+    const st = campStats(ac.id), n = st ? st.count : 0;
+    html += `<div class="card">
+      <div class="card-title">Cycle en cours</div>
+      <div class="camp-meta">Démarré le ${fmtDate(ac.startedAt)} · ${n}/${TOTAL} mesures</div>
+      <div class="progress-bar"><span style="width:${Math.round(n/TOTAL*100)}%"></span></div>
+      ${dayGridHtml(ac.id)}
+      <div style="margin-top:14px">${measureFormHtml(ac.id)}</div>
+      ${st ? `<div style="margin-top:14px">${verdictHtml(st, st.complete)}</div>` : ""}
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn btn-accent btn-full" onclick="endCampaign('${ac.id}')">Terminer le cycle</button>
+      </div>
+      <button class="btn-ghost" onclick="deleteCampaign('${ac.id}')">Abandonner ce cycle</button>
+    </div>`;
+  } else {
+    html += `<div class="card">
+      <div class="card-title">Nouveau cycle</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Le protocole d'automesure : 3 mesures le matin (avant petit-déjeuner et médicaments) et 3 le soir, pendant 3 jours consécutifs. La moyenne des 18 est comparée au seuil ${TH_SYS}/${TH_DIA}.</p>
+      <button class="btn btn-accent btn-full" onclick="startCampaign()">Démarrer un cycle de 3 jours</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Mesure ponctuelle</div>
+      ${measureFormHtml(null)}
+    </div>`;
+  }
+
+  // Historique des cycles terminés
+  const done = campaigns.filter(c => c.endedAt).sort((a,b) => b.endedAt - a.endedAt);
+  if (done.length) {
+    html += `<div class="card"><div class="card-title">Cycles terminés</div>` + done.map(c => {
+      const st = campStats(c.id);
+      if (!st) return "";
+      return `<div class="hist-item">
+        <div><div class="hist-main">${st.sys}/${st.dia} <span style="font-size:11px;color:var(--text3)">mmHg${st.pulse ? " · "+st.pulse+" bpm" : ""}</span></div>
+          <div class="hist-sub">${fmtDate(c.startedAt)} · ${st.count}/${TOTAL} mesures</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pill ${st.high ? "high" : "ok"}">${st.high ? "Élevée" : "Normale"}</span>
+          <button class="btn-ghost" onclick="deleteCampaign('${c.id}')" aria-label="Supprimer">✕</button></div>
+      </div>`;
+    }).join("") + `</div>`;
+  }
+
+  // Mesures ponctuelles (hors cycle)
+  const free = measures.filter(m => !m.campaignId).sort((a,b) => b.ts - a.ts).slice(0, 20);
+  if (free.length) {
+    html += `<div class="card"><div class="card-title">Mesures ponctuelles</div>` + free.map(m => {
+      const high = m.sys >= TH_SYS || m.dia >= TH_DIA;
+      return `<div class="hist-item">
+        <div><div class="hist-main">${m.sys}/${m.dia} <span style="font-size:11px;color:var(--text3)">mmHg${m.pulse ? " · "+m.pulse+" bpm" : ""}</span></div>
+          <div class="hist-sub">${fmtDate(m.ts)} · ${fmtTime(m.ts)}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pill ${high ? "high" : "ok"}">${high ? "≥ seuil" : "OK"}</span>
+          <button class="btn-ghost" onclick="deleteMeasure('${m.id}')" aria-label="Supprimer">✕</button></div>
+      </div>`;
+    }).join("") + `</div>`;
+  }
+
+  html += chartHtml();
+
+  if (!measures.length && !campaigns.length) {
+    html += `<p class="empty">Aucune donnée — démarre un cycle ou ajoute une mesure ponctuelle ci-dessus.</p>`;
+  }
+
+  document.getElementById("app").innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>

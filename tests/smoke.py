@@ -34,6 +34,7 @@ APPS = {
     "suivi-km-loa.html":     "km",
     "bibliotheque.html":     "Biblio",
     "covoiturage-rando.html": "Covoiturage",
+    "hta.html":              "Tension",
 }
 
 

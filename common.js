@@ -67,7 +67,7 @@ function pockExportToFile() {
 // pull on load, debounced push on change, last-write-wins per app.
 // Without pock-sync-url + pock-sync-token configured, nothing runs.
 
-const POCK_SYNC_APPS = { km: 'pock-km-', covoit: 'pock-covoit-', biblio: 'pock-biblio-' };
+const POCK_SYNC_APPS = { km: 'pock-km-', covoit: 'pock-covoit-', biblio: 'pock-biblio-', hta: 'pock-hta-' };
 const POCK_SYNC_DEBOUNCE_MS = 1500;
 let pockSyncApplying = false;
 const pockSyncTimers = {};
