@@ -98,6 +98,35 @@
   .hist-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
   .pill { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; white-space: nowrap; background: var(--bg); color: var(--c); border: 1px solid var(--bd); }
   .empty { text-align: center; color: var(--text3); font-size: 13px; padding: 18px 0; }
+  .hist-info { min-width: 0; flex: 1; }
+  .hist-unit { font-size: 11px; color: var(--text3); font-weight: 500; white-space: nowrap; }
+  .hist-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .btn-ghost.ok:hover { color: var(--accent); }
+  /* Pastille de niveau compacte (lignes de détail) au lieu du pill long */
+  .lvl-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
+  /* Cycles terminés : bloc résumé + détail repliable */
+  .hist-block { border-top: 1px solid var(--border); padding-top: 4px; }
+  .hist-block:first-of-type { border-top: none; }
+  .hist-block .hist-item { border-top: none; }
+  .hist-details { margin: 0 0 6px; }
+  .hist-details > summary { font-size: 11px; color: var(--text3); cursor: pointer; padding: 4px 0 6px; list-style: none; }
+  .hist-details > summary::-webkit-details-marker { display: none; }
+  .hist-details > summary::before { content: "▸ "; }
+  .hist-details[open] > summary::before { content: "▾ "; }
+  .hist-measures { padding-left: 10px; border-left: 2px solid var(--border); margin-left: 2px; }
+  .hist-measures .hist-item { padding: 7px 0; }
+  /* Édition inline d'une mesure */
+  .hist-item.editing { gap: 8px; }
+  .edit-bp-row { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1; }
+  .edit-bp { width: 56px; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; font-family: var(--font-mono); text-align: center; background: var(--bg); color: var(--text); }
+  .edit-bp.pulse { width: 64px; }
+  .edit-sep { color: var(--text3); font-family: var(--font-mono); }
+  @media (max-width: 390px) {
+    .hist-main { font-size: 14px; }
+    .verdict-val { font-size: 24px; }
+    .edit-bp { width: 48px; }
+    .edit-bp.pulse { width: 56px; }
+  }
 
   /* Chart */
   .chart-wrap { overflow-x: auto; }
@@ -201,6 +230,67 @@ function deleteCampaign(cid) {
   measures = measures.filter(m => m.campaignId !== cid);
   campaigns = campaigns.filter(c => c.id !== cid);
   saveMeasures(); saveCampaigns(); render();
+}
+
+// Édition inline d'une mesure isolée (même UX que l'app km : ✎ → champs → ✓).
+let editMeasureId = null;
+function startEditMeasure(id) {
+  editMeasureId = id; render();
+  const el = document.getElementById("emSys"); if (el) el.focus();
+}
+function cancelEditMeasure() { editMeasureId = null; render(); }
+function saveEditMeasure(id) {
+  const sys = parseInt(document.getElementById("emSys").value, 10);
+  const dia = parseInt(document.getElementById("emDia").value, 10);
+  const pulse = parseInt(document.getElementById("emPulse").value, 10) || null;
+  if (!(sys >= 50 && sys <= 300) || !(dia >= 30 && dia <= 200)) {
+    alert("Valeurs invalides — vérifie SYS (50-300) et DIA (30-200)."); return;
+  }
+  const m = measures.find(x => x.id === id);
+  if (m) { m.sys = sys; m.dia = dia; m.pulse = pulse; saveMeasures(); }
+  editMeasureId = null; render();
+}
+
+// --- Rapport médecin (cycle de 3 jours → texte partageable / exportable) ----
+function buildReport(cid) {
+  const c = campaigns.find(x => x.id === cid); if (!c) return "";
+  const st = campStats(cid); if (!st) return "";
+  const ms = campMeasures(cid);
+  const L = [];
+  L.push("Automesure tensionnelle — cycle « règle des 3 » (matin/soir, 3 jours)");
+  L.push("Période : " + fmtDate(c.startedAt) + (c.endedAt ? " → " + fmtDate(c.endedAt) : ""));
+  L.push("");
+  L.push("Moyenne : " + st.sys + "/" + st.dia + " mmHg" + (st.pulse ? " · " + st.pulse + " bpm" : "")
+    + " — " + BP_LEVELS[st.lvl].label);
+  L.push("Calculée sur " + st.count + "/" + TOTAL + " mesures · seuil HAS automesure " + TH_SYS + "/" + TH_DIA + " mmHg");
+  L.push("");
+  L.push("Détail des mesures :");
+  let curDay = "";
+  ms.forEach(m => {
+    const dk = dayKey(m.ts);
+    if (dk !== curDay) { curDay = dk; L.push("— " + fmtDate(m.ts)); }
+    const slot = slotOf(m.ts) === "morning" ? "matin" : "soir ";
+    L.push("  " + slot + " " + fmtTime(m.ts) + "  " + m.sys + "/" + m.dia
+      + (m.pulse ? " · " + m.pulse + " bpm" : ""));
+  });
+  L.push("");
+  L.push("Repères indicatifs (automesure HAS) — ne remplace pas un avis médical.");
+  return L.join("\n");
+}
+async function shareReport(cid) {
+  const text = buildReport(cid);
+  if (!text) return;
+  if (navigator.share) {
+    try { await navigator.share({ title: "Automesure tensionnelle", text }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  // Fallback export : presse-papier (best-effort) + fichier .txt téléchargeable
+  try { await navigator.clipboard.writeText(text); } catch (_) {}
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+  a.download = "tension-rapport.txt";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 // --- Série guidée (3 mesures enchaînées, repos minuté, écran maintenu) -----
@@ -379,6 +469,38 @@ function chartHtml() {
     </svg></div></div>`;
 }
 
+// Ligne d'une mesure isolée (historique) : valeur + horodatage + édition inline.
+// opts.slot = afficher matin/soir (mesures d'un cycle).
+function measureRowHtml(m, opts) {
+  opts = opts || {};
+  if (editMeasureId === m.id) {
+    return `<div class="hist-item editing">
+      <div class="edit-bp-row">
+        <input class="edit-bp" id="emSys" type="text" inputmode="numeric" pattern="[0-9]*" value="${m.sys}" aria-label="SYS">
+        <span class="edit-sep">/</span>
+        <input class="edit-bp" id="emDia" type="text" inputmode="numeric" pattern="[0-9]*" value="${m.dia}" aria-label="DIA">
+        <input class="edit-bp pulse" id="emPulse" type="text" inputmode="numeric" pattern="[0-9]*" value="${m.pulse || ''}" placeholder="bpm" aria-label="Pouls" onkeydown="if(event.key==='Enter')saveEditMeasure('${m.id}')">
+      </div>
+      <div class="hist-actions">
+        <button class="btn-ghost ok" onclick="saveEditMeasure('${m.id}')" aria-label="Valider">✓</button>
+        <button class="btn-ghost" onclick="cancelEditMeasure()" aria-label="Annuler">✕</button>
+      </div></div>`;
+  }
+  const lv = bpLevel(m.sys, m.dia);
+  const when = opts.slot
+    ? `${fmtDate(m.ts)} · ${slotOf(m.ts) === "morning" ? "matin" : "soir"} · ${fmtTime(m.ts)}`
+    : `${fmtDate(m.ts)} · ${fmtTime(m.ts)}`;
+  return `<div class="hist-item">
+    <div class="hist-info">
+      <div class="hist-main">${m.sys}/${m.dia}<span class="hist-unit"> mmHg${m.pulse ? " · " + m.pulse + " bpm" : ""}</span></div>
+      <div class="hist-sub">${when}</div></div>
+    <div class="hist-actions">
+      <span class="lvl-dot lv${lv}" title="${BP_LEVELS[lv].label}"></span>
+      <button class="btn-ghost" onclick="startEditMeasure('${m.id}')" aria-label="Modifier">✎</button>
+      <button class="btn-ghost" onclick="deleteMeasure('${m.id}')" aria-label="Supprimer">✕</button>
+    </div></div>`;
+}
+
 function render() {
   const ac = activeCampaign();
   let html = `<div class="top"><h1>Tension</h1></div>
@@ -430,28 +552,28 @@ function render() {
     html += `<div class="card"><div class="card-title">Cycles terminés</div>` + done.map(c => {
       const st = campStats(c.id);
       if (!st) return "";
-      return `<div class="hist-item">
-        <div><div class="hist-main">${st.sys}/${st.dia} <span style="font-size:11px;color:var(--text3)">mmHg${st.pulse ? " · "+st.pulse+" bpm" : ""}</span></div>
-          <div class="hist-sub">${fmtDate(c.startedAt)} · ${st.count}/${TOTAL} mesures</div></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="pill lv${st.lvl}">${BP_LEVELS[st.lvl].label}</span>
-          <button class="btn-ghost" onclick="deleteCampaign('${c.id}')" aria-label="Supprimer">✕</button></div>
+      const ms = campMeasures(c.id);
+      return `<div class="hist-block">
+        <div class="hist-item">
+          <div class="hist-info">
+            <div class="hist-main">${st.sys}/${st.dia}<span class="hist-unit"> mmHg${st.pulse ? " · "+st.pulse+" bpm" : ""}</span></div>
+            <div class="hist-sub">${fmtDate(c.startedAt)} · ${st.count}/${TOTAL} mesures</div></div>
+          <div class="hist-actions">
+            <span class="pill lv${st.lvl}">${BP_LEVELS[st.lvl].label}</span>
+            <button class="btn-ghost" onclick="shareReport('${c.id}')" aria-label="Rapport médecin">📋</button>
+            <button class="btn-ghost" onclick="deleteCampaign('${c.id}')" aria-label="Supprimer le cycle">✕</button></div>
+        </div>
+        <details class="hist-details"><summary>Détail des ${ms.length} mesures</summary>
+          <div class="hist-measures">${ms.map(m => measureRowHtml(m, { slot: true })).join("")}</div>
+        </details>
       </div>`;
     }).join("") + `</div>`;
   }
 
   const free = measures.filter(m => !m.campaignId).sort((a,b) => b.ts - a.ts).slice(0, 20);
   if (free.length) {
-    html += `<div class="card"><div class="card-title">Mesures ponctuelles</div>` + free.map(m => {
-      const lv = bpLevel(m.sys, m.dia);
-      return `<div class="hist-item">
-        <div><div class="hist-main">${m.sys}/${m.dia} <span style="font-size:11px;color:var(--text3)">mmHg${m.pulse ? " · "+m.pulse+" bpm" : ""}</span></div>
-          <div class="hist-sub">${fmtDate(m.ts)} · ${fmtTime(m.ts)}</div></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="pill lv${lv}">${BP_LEVELS[lv].label}</span>
-          <button class="btn-ghost" onclick="deleteMeasure('${m.id}')" aria-label="Supprimer">✕</button></div>
-      </div>`;
-    }).join("") + `</div>`;
+    html += `<div class="card"><div class="card-title">Mesures ponctuelles</div>`
+      + free.map(m => measureRowHtml(m)).join("") + `</div>`;
   }
 
   if (!measures.length && !campaigns.length) {
