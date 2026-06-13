@@ -15,11 +15,16 @@
 <link rel="stylesheet" href="common.css">
 <style>
   :root {
-    --accent: #d64550;
-    --success: #0d9668; --success-bg: #ecfdf5; --success-border: #6ee7b7;
-    --danger: #e5393f; --danger-bg: #fef2f2; --danger-border: #fca5a5;
-    --warn-bg: #fff7ed; --warn-border: #fdba74; --warn-text: #b45309;
+    --accent: #14b8a6;   /* turquoise apaisant — distinct des couleurs d'état */
   }
+  /* Échelle de classification (var --c texte, --bg fond, --bd bordure) —
+     chaque niveau porte ses 3 couleurs via une classe .lvN. */
+  .lv0 { --c:#3f8da0; --bg:#eef6f8; --bd:#bcdde4; }  /* faible (hypotension) */
+  .lv1 { --c:#0d9668; --bg:#ecfdf5; --bd:#6ee7b7; }  /* normale */
+  .lv2 { --c:#a16207; --bg:#fefce8; --bd:#fde68a; }  /* normale haute */
+  .lv3 { --c:#b45309; --bg:#fff7ed; --bd:#fdba74; }  /* légèrement élevée */
+  .lv4 { --c:#c2410c; --bg:#fff1e9; --bd:#fb923c; }  /* HTA modérée */
+  .lv5 { --c:#dc2626; --bg:#fef2f2; --bd:#fca5a5; }  /* HTA forte */
   .app { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
   .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
   h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; }
@@ -44,7 +49,7 @@
   .btn-full { width: 100%; }
   .btn-outline { background: none; border: 1.5px solid var(--border); color: var(--text2); }
   .btn-ghost { background: none; border: none; color: var(--text3); font-size: 13px; cursor: pointer; padding: 6px 4px; font-family: var(--font-sans); }
-  .btn-ghost:hover { color: var(--danger); }
+  .btn-ghost:hover { color: #dc2626; }
 
   /* Campagne */
   .camp-meta { font-size: 12px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 14px; }
@@ -59,28 +64,39 @@
   .progress-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin: 4px 0 14px; }
   .progress-bar > span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
 
-  /* Verdict */
-  .verdict { border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
-  .verdict.ok { background: var(--success-bg); border: 1px solid var(--success-border); }
-  .verdict.high { background: var(--danger-bg); border: 1px solid var(--danger-border); }
-  .verdict.partial { background: var(--warn-bg); border: 1px solid var(--warn-border); }
-  .verdict-val { font-size: 28px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; }
+  /* Verdict — coloré par niveau de classification (.lvN) */
+  .verdict { border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; background: var(--bg); border: 1px solid var(--bd); }
+  .verdict-val { font-size: 28px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; color: var(--c); }
   .verdict-val .unit { font-size: 13px; font-weight: 500; color: var(--text3); }
-  .verdict-label { font-size: 13px; font-weight: 600; margin-top: 2px; }
-  .verdict.ok .verdict-label { color: var(--success); }
-  .verdict.high .verdict-label { color: var(--danger); }
-  .verdict.partial .verdict-label { color: var(--warn-text); }
+  .verdict-label { font-size: 13px; font-weight: 700; margin-top: 2px; color: var(--c); }
   .verdict-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* Légende de l'échelle */
+  .scale { display: flex; flex-wrap: wrap; gap: 6px; }
+  .scale-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); background: var(--bg); border: 1px solid var(--bd); border-radius: 8px; padding: 4px 9px; }
+  .scale-item b { color: var(--c); font-weight: 700; }
+  .scale-item .sw { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+  .disclaimer { font-size: 11px; color: var(--text3); margin-top: 12px; line-height: 1.4; }
+
+  /* Série guidée */
+  .guided { text-align: center; padding: 6px 0; }
+  .guided-phase { font-size: 12px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .guided-timer { font-size: 56px; font-weight: 800; font-family: var(--font-mono); color: var(--accent); letter-spacing: -0.02em; line-height: 1; }
+  .guided-hint { font-size: 13px; color: var(--text2); margin: 12px auto 18px; max-width: 320px; line-height: 1.45; }
+  .guided-actions { display: flex; gap: 8px; }
+  .btn-wake { display: inline-flex; align-items: center; gap: 6px; }
+  .wake-badge { font-size: 11px; color: var(--text3); margin-top: 10px; }
+  .dur-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .dur-label { font-size: 11px; color: var(--text3); width: 64px; flex-shrink: 0; }
+  .dur-btn { font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-family: var(--font-sans); }
+  .dur-btn.on { border-color: var(--accent); background: #e6faf7; color: var(--accent); font-weight: 700; }
 
   /* Historique */
   .hist-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); gap: 10px; }
   .hist-item:first-child { border-top: none; }
   .hist-main { font-family: var(--font-mono); font-size: 15px; font-weight: 600; }
   .hist-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
-  .pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
-  .pill.ok { background: var(--success-bg); color: var(--success); }
-  .pill.high { background: var(--danger-bg); color: var(--danger); }
-  .pill.free { background: var(--bg); color: var(--text3); }
+  .pill { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; white-space: nowrap; background: var(--bg); color: var(--c); border: 1px solid var(--bd); }
   .empty { text-align: center; color: var(--text3); font-size: 13px; padding: 18px 0; }
 
   /* Chart */
@@ -104,6 +120,25 @@ const CAMPAIGNS_KEY = "pock-hta-campaigns";
 
 // Seuil automesure HAS/SFHTA : HTA si moyenne ≥ 135/85 mmHg (vs 140/90 cabinet).
 const TH_SYS = 135, TH_DIA = 85;
+
+// Échelle de classification (automesure). Niveau = le plus sévère entre SYS
+// et DIA (pratique standard). Ancrée sur le seuil HAS 135/85 ; les paliers
+// supérieurs suivent les grades ESH, ≥180/110 = seuil d'alerte (urgence).
+const BP_LEVELS = [
+  { lv: 0, label: "Tension faible" },       // hypotension <90/60
+  { lv: 1, label: "Tension normale" },      // <130/80
+  { lv: 2, label: "Normale haute" },        // 130-134/80-84 (sous le seuil HTA)
+  { lv: 3, label: "Légèrement élevée" },    // 135-159/85-99 (≥ seuil automesure)
+  { lv: 4, label: "HTA modérée" },          // 160-179/100-109
+  { lv: 5, label: "HTA forte" },            // ≥180/110
+];
+function bpLevel(sys, dia) {
+  if (sys < 90 || dia < 60) return 0;                                  // hypotension
+  const s = sys < 130 ? 1 : sys < TH_SYS ? 2 : sys < 160 ? 3 : sys < 180 ? 4 : 5;
+  const d = dia < 80  ? 1 : dia < TH_DIA ? 2 : dia < 100 ? 3 : dia < 110 ? 4 : 5;
+  return Math.max(s, d);
+}
+function bpInfo(sys, dia) { return BP_LEVELS[bpLevel(sys, dia)]; }
 const PER_SLOT = 3;      // 3 mesures par demi-journée
 const DAYS = 3;          // sur 3 jours
 const TOTAL = DAYS * 2 * PER_SLOT;  // 18
@@ -132,8 +167,7 @@ function campStats(cid) {
   const ms = campMeasures(cid);
   if (!ms.length) return null;
   const sys = mean(ms.map(m => m.sys)), dia = mean(ms.map(m => m.dia)), pulse = mean(ms.map(m => m.pulse).filter(Boolean));
-  const high = sys >= TH_SYS || dia >= TH_DIA;
-  return { sys, dia, pulse, high, count: ms.length, complete: ms.length >= TOTAL };
+  return { sys, dia, pulse, lvl: bpLevel(sys, dia), count: ms.length, complete: ms.length >= TOTAL };
 }
 
 // --- Actions ---------------------------------------------------------------
@@ -169,16 +203,108 @@ function deleteCampaign(cid) {
   saveMeasures(); saveCampaigns(); render();
 }
 
+// --- Série guidée (3 mesures enchaînées, repos minuté, écran maintenu) -----
+// Durées réglables (persistées, synchronisées). Défaut pragmatique 60s/30s ;
+// le protocole HAS complet = 300s de repos. Garder la même valeur à chaque
+// série pour que les mesures restent comparables.
+function restSec() { const v = parseInt(localStorage.getItem("pock-hta-rest"), 10); return v > 0 ? v : 60; }
+function gapSec()  { const v = parseInt(localStorage.getItem("pock-hta-gap"), 10);  return v > 0 ? v : 30; }
+function setDur(key, sec) { localStorage.setItem("pock-hta-" + key, String(sec)); render(); }
+let guided = null;     // { cid, phase:'rest'|'gap'|'measuring', idx, secsLeft, wakeLock }
+let guidedTimerId = null;
+
+async function acquireWake() {
+  try { if ("wakeLock" in navigator && guided) guided.wakeLock = await navigator.wakeLock.request("screen"); }
+  catch (_) { /* refusé / non supporté : best-effort, l'OS gère sa veille */ }
+}
+function releaseWake() {
+  try { if (guided && guided.wakeLock) guided.wakeLock.release(); } catch (_) {}
+  if (guided) guided.wakeLock = null;
+}
+function stopTick() { clearInterval(guidedTimerId); guidedTimerId = null; }
+function startTick() {
+  stopTick();
+  guidedTimerId = setInterval(() => {
+    if (!guided) { stopTick(); return; }
+    guided.secsLeft--;
+    if (guided.secsLeft <= 0) { stopTick(); guided.phase = "measuring"; render(); }
+    else { const el = document.getElementById("guidedTimer"); if (el) el.textContent = guided.secsLeft; }
+  }, 1000);
+}
+
+function startGuided(cid) {
+  guided = { cid, phase: "rest", idx: 0, secsLeft: restSec(), wakeLock: null };
+  acquireWake();
+  startTick();
+  render();
+}
+function skipGuidedWait() {   // passer le repos / l'intervalle → mesure tout de suite
+  if (!guided) return;
+  stopTick(); guided.phase = "measuring"; render();
+}
+function cancelGuided() {
+  stopTick(); releaseWake(); guided = null; render();
+}
+function submitGuided() {
+  if (!guided) return;
+  const sys = parseInt(document.getElementById("inSys").value, 10);
+  const dia = parseInt(document.getElementById("inDia").value, 10);
+  const pulse = parseInt(document.getElementById("inPulse").value, 10) || null;
+  if (!(sys >= 50 && sys <= 300) || !(dia >= 30 && dia <= 200)) {
+    alert("Valeurs invalides — vérifie SYS (50-300) et DIA (30-200)."); return;
+  }
+  measures.push({ id: uid(), ts: Date.now(), sys, dia, pulse, campaignId: guided.cid });
+  saveMeasures();
+  if (guided.idx < PER_SLOT - 1) { guided.idx++; guided.phase = "gap"; guided.secsLeft = gapSec(); startTick(); }
+  else { stopTick(); releaseWake(); guided = null; }   // série de 3 terminée
+  render();
+}
+
+// Réacquérir le wake lock au retour au premier plan (il saute en arrière-plan).
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && guided && guided.phase !== "measuring") acquireWake();
+});
+
 // --- Rendu -----------------------------------------------------------------
-function measureFormHtml(campaignId) {
-  const cid = campaignId ? `'${campaignId}'` : "null";
+function measureFormHtml(onSubmit, hint) {
   return `<div class="measure-form">
       <div class="mf-field"><label for="inSys">SYS</label><input id="inSys" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="—"></div>
       <div class="mf-field"><label for="inDia">DIA</label><input id="inDia" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="—"></div>
-      <div class="mf-field"><label for="inPulse">Pouls</label><input id="inPulse" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="—" onkeydown="if(event.key==='Enter')addMeasure(${cid})"></div>
-      <button class="mf-btn" onclick="addMeasure(${cid})">+ Ajouter</button>
+      <div class="mf-field"><label for="inPulse">Pouls</label><input id="inPulse" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="—" onkeydown="if(event.key==='Enter'){${onSubmit}}"></div>
+      <button class="mf-btn" onclick="${onSubmit}">Valider</button>
     </div>
-    <div class="mf-hint">Horodatage automatique · ${new Date().getHours() < 12 ? "série du matin" : "série du soir"} · au repos, assis depuis 5 min</div>`;
+    <div class="mf-hint">${hint || ("Horodatage automatique · " + (new Date().getHours() < 12 ? "série du matin" : "série du soir") + " · au repos, assis depuis 5 min")}</div>`;
+}
+
+function durationControlHtml() {
+  const r = restSec(), g = gapSec();
+  const opt = (kind, sec, lbl, cur) => `<button class="dur-btn ${cur === sec ? "on" : ""}" onclick="setDur('${kind}',${sec})">${lbl}</button>`;
+  return `<div class="dur-row"><span class="dur-label">Repos</span>${opt("rest",300,"5 min",r)}${opt("rest",120,"2 min",r)}${opt("rest",60,"1 min",r)}${opt("rest",30,"30 s",r)}</div>
+    <div class="dur-row"><span class="dur-label">Intervalle</span>${opt("gap",60,"60 s",g)}${opt("gap",30,"30 s",g)}${opt("gap",15,"15 s",g)}</div>`;
+}
+
+function guidedCardHtml() {
+  const g = guided, step = `Mesure ${g.idx + 1} sur ${PER_SLOT}`;
+  const wake = `<div class="wake-badge">🔆 Écran maintenu allumé pendant la série</div>
+    <button class="btn-ghost" onclick="cancelGuided()">Arrêter la série</button>`;
+  if (g.phase === "measuring") {
+    return `<div class="card guided">
+      <div class="guided-phase">${step}</div>
+      <div class="guided-hint">Lance la mesure sur le tensiomètre, puis saisis les valeurs.</div>
+      ${measureFormHtml("submitGuided()", "La prochaine étape s'enchaîne automatiquement.")}
+      ${wake}</div>`;
+  }
+  const title = g.phase === "rest" ? "Repos avant la 1ʳᵉ mesure" : `Patientez avant la mesure ${g.idx + 1}`;
+  const hint = g.phase === "rest"
+    ? "Installe-toi assis, dos appuyé, bras soutenu à hauteur du cœur, sans parler ni croiser les jambes. La mesure démarre à la fin du minuteur."
+    : "Reste au repos dans la même position. La mesure suivante démarre à la fin du minuteur.";
+  return `<div class="card guided">
+    <div class="guided-phase">${title}</div>
+    <div class="guided-timer" id="guidedTimer">${g.secsLeft}</div>
+    <div style="font-size:12px;color:var(--text3);margin:-2px 0 0">secondes</div>
+    <div class="guided-hint">${hint}</div>
+    <button class="btn btn-accent btn-full" onclick="skipGuidedWait()">Je suis prêt · passer l'attente</button>
+    ${wake}</div>`;
 }
 
 function dayGridHtml(cid) {
@@ -200,14 +326,21 @@ function dayGridHtml(cid) {
 }
 
 function verdictHtml(st, complete) {
-  const cls = st.high ? "high" : "ok";
-  const wrapCls = complete ? cls : "partial";
-  const label = st.high ? `Tension élevée (≥ ${TH_SYS}/${TH_DIA})` : `Tension normale (< ${TH_SYS}/${TH_DIA})`;
-  const sub = complete ? `Moyenne sur ${st.count} mesures` : `Cycle incomplet — moyenne sur ${st.count}/${TOTAL} mesures`;
-  return `<div class="verdict ${wrapCls}">
+  const info = BP_LEVELS[st.lvl];
+  const sub = complete ? `Moyenne sur ${st.count} mesures · seuil automesure HAS` : `Cycle incomplet — moyenne provisoire sur ${st.count}/${TOTAL} mesures`;
+  return `<div class="verdict lv${st.lvl}">
       <div class="verdict-val">${st.sys}/${st.dia} <span class="unit">mmHg</span>${st.pulse ? ` · ${st.pulse} <span class="unit">bpm</span>` : ""}</div>
-      <div class="verdict-label">${complete ? label : "Résultat partiel · " + label}</div>
-      <div class="verdict-sub">${sub} · seuil automesure HAS</div>
+      <div class="verdict-label">${complete ? info.label : "Provisoire · " + info.label}</div>
+      <div class="verdict-sub">${sub}</div>
+    </div>`;
+}
+
+function scaleLegendHtml() {
+  const items = BP_LEVELS.map(b => `<span class="scale-item lv${b.lv}"><span class="sw"></span><b>${b.label}</b></span>`).join("");
+  return `<div class="card">
+      <div class="card-title">Échelle (automesure)</div>
+      <div class="scale">${items}</div>
+      <p class="disclaimer">Repères indicatifs ancrés sur le seuil HAS d'automesure (HTA ≥ ${TH_SYS}/${TH_DIA} mmHg, vs 140/90 en cabinet). Classement par la valeur la plus haute entre systolique et diastolique. <b>Ne remplace pas un avis médical</b> — une valeur ≥ 180/110 justifie de contacter un médecin.</p>
     </div>`;
 }
 
@@ -233,17 +366,27 @@ function render() {
   let html = `<div class="top"><h1>Tension</h1></div>
     <p class="tagline">Automesure · cycle « règle des 3 » matin/soir sur 3 jours</p>`;
 
-  if (ac) {
+  // --- Zone d'action (haut) ---
+  if (guided) {
+    html += guidedCardHtml();
+    const st = campStats(guided.cid), n = st ? st.count : 0;
+    html += `<div class="card"><div class="card-title">Progression du cycle</div>
+      <div class="progress-bar"><span style="width:${Math.round(n/TOTAL*100)}%"></span></div>
+      ${dayGridHtml(guided.cid)}</div>`;
+  } else if (ac) {
     const st = campStats(ac.id), n = st ? st.count : 0;
     html += `<div class="card">
       <div class="card-title">Cycle en cours</div>
       <div class="camp-meta">Démarré le ${fmtDate(ac.startedAt)} · ${n}/${TOTAL} mesures</div>
       <div class="progress-bar"><span style="width:${Math.round(n/TOTAL*100)}%"></span></div>
       ${dayGridHtml(ac.id)}
-      <div style="margin-top:14px">${measureFormHtml(ac.id)}</div>
+      <div style="margin-top:14px">${durationControlHtml()}</div>
+      <button class="btn btn-accent btn-full" style="margin-top:6px" onclick="startGuided('${ac.id}')">▶ Série guidée (3 mesures minutées)</button>
+      <details style="margin-top:12px"><summary style="font-size:12px;color:var(--text3);cursor:pointer">Saisie manuelle d'une mesure</summary>
+        <div style="margin-top:10px">${measureFormHtml("addMeasure('" + ac.id + "')")}</div></details>
       ${st ? `<div style="margin-top:14px">${verdictHtml(st, st.complete)}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:6px">
-        <button class="btn btn-accent btn-full" onclick="endCampaign('${ac.id}')">Terminer le cycle</button>
+        <button class="btn btn-outline btn-full" onclick="endCampaign('${ac.id}')">Terminer le cycle</button>
       </div>
       <button class="btn-ghost" onclick="deleteCampaign('${ac.id}')">Abandonner ce cycle</button>
     </div>`;
@@ -255,11 +398,15 @@ function render() {
     </div>
     <div class="card">
       <div class="card-title">Mesure ponctuelle</div>
-      ${measureFormHtml(null)}
+      ${measureFormHtml("addMeasure(null)")}
     </div>`;
   }
 
-  // Historique des cycles terminés
+  // Légende + courbe
+  html += scaleLegendHtml();
+  html += chartHtml();
+
+  // --- Historique (bas) ---
   const done = campaigns.filter(c => c.endedAt).sort((a,b) => b.endedAt - a.endedAt);
   if (done.length) {
     html += `<div class="card"><div class="card-title">Cycles terminés</div>` + done.map(c => {
@@ -269,28 +416,25 @@ function render() {
         <div><div class="hist-main">${st.sys}/${st.dia} <span style="font-size:11px;color:var(--text3)">mmHg${st.pulse ? " · "+st.pulse+" bpm" : ""}</span></div>
           <div class="hist-sub">${fmtDate(c.startedAt)} · ${st.count}/${TOTAL} mesures</div></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="pill ${st.high ? "high" : "ok"}">${st.high ? "Élevée" : "Normale"}</span>
+          <span class="pill lv${st.lvl}">${BP_LEVELS[st.lvl].label}</span>
           <button class="btn-ghost" onclick="deleteCampaign('${c.id}')" aria-label="Supprimer">✕</button></div>
       </div>`;
     }).join("") + `</div>`;
   }
 
-  // Mesures ponctuelles (hors cycle)
   const free = measures.filter(m => !m.campaignId).sort((a,b) => b.ts - a.ts).slice(0, 20);
   if (free.length) {
     html += `<div class="card"><div class="card-title">Mesures ponctuelles</div>` + free.map(m => {
-      const high = m.sys >= TH_SYS || m.dia >= TH_DIA;
+      const lv = bpLevel(m.sys, m.dia);
       return `<div class="hist-item">
         <div><div class="hist-main">${m.sys}/${m.dia} <span style="font-size:11px;color:var(--text3)">mmHg${m.pulse ? " · "+m.pulse+" bpm" : ""}</span></div>
           <div class="hist-sub">${fmtDate(m.ts)} · ${fmtTime(m.ts)}</div></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="pill ${high ? "high" : "ok"}">${high ? "≥ seuil" : "OK"}</span>
+          <span class="pill lv${lv}">${BP_LEVELS[lv].label}</span>
           <button class="btn-ghost" onclick="deleteMeasure('${m.id}')" aria-label="Supprimer">✕</button></div>
       </div>`;
     }).join("") + `</div>`;
   }
-
-  html += chartHtml();
 
   if (!measures.length && !campaigns.length) {
     html += `<p class="empty">Aucune donnée — démarre un cycle ou ajoute une mesure ponctuelle ci-dessus.</p>`;
