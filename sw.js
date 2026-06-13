@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pock-v21';
+const CACHE_NAME = 'pock-v22';
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,8 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
-  './icon-maskable.png'
+  './icon-maskable.png',
+  './icon-monochrome.png'
 ];
 
 // Précache par fichier (pas addAll) : un seul 404/timeout ne doit pas
