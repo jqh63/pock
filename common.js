@@ -19,7 +19,23 @@ if ('serviceWorker' in navigator) {
   // un reload en plein démarrage. updateViaCache:'none' : ne pas servir un
   // sw.js périmé depuis le cache HTTP (sinon le bump CACHE peut tarder).
   const hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .then(reg => { if (reg && reg.update) reg.update(); })
+    .catch(() => {});
+  // Détection d'update active (portée de la PWA WoL) — aucun déclencheur seul
+  // n'est fiable sur Android PWA standalone : le focus ne se déclenche souvent
+  // pas au retour depuis le sélecteur d'apps, les events de navigation sont
+  // rares. On empile donc plusieurs sondes pour forcer reg.update().
+  const forceSwCheck = () => {
+    navigator.serviceWorker.getRegistration()
+      .then(reg => { if (reg && reg.update) reg.update(); })
+      .catch(() => {});
+  };
+  window.addEventListener('focus', forceSwCheck);                       // desktop, parfois Android
+  document.addEventListener('visibilitychange', () => {                 // plus fiable sur Android PWA
+    if (!document.hidden) forceSwCheck();
+  });
+  setInterval(() => { if (!document.hidden) forceSwCheck(); }, 5 * 60 * 1000); // filet si l'app reste ouverte des heures
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing || !hadController) return;
