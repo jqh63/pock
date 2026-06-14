@@ -373,7 +373,7 @@ function measureFormHtml(onSubmit, hint) {
 function durationControlHtml() {
   const r = restSec(), g = gapSec();
   const opt = (kind, sec, lbl, cur) => `<button class="dur-btn ${cur === sec ? "on" : ""}" onclick="setDur('${kind}',${sec})">${lbl}</button>`;
-  return `<div class="dur-row"><span class="dur-label">Repos</span>${opt("rest",300,"5 min",r)}${opt("rest",120,"2 min",r)}${opt("rest",60,"1 min",r)}${opt("rest",30,"30 s",r)}</div>
+  return `<div class="dur-row"><span class="dur-label">Repos</span>${opt("rest",120,"2 min",r)}${opt("rest",60,"1 min",r)}${opt("rest",30,"30 s",r)}</div>
     <div class="dur-row"><span class="dur-label">Intervalle</span>${opt("gap",60,"60 s",g)}${opt("gap",30,"30 s",g)}${opt("gap",15,"15 s",g)}</div>`;
 }
 
