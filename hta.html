@@ -53,11 +53,15 @@
 
   /* Campagne */
   .camp-meta { font-size: 12px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 14px; }
-  .day-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
-  .day-row:first-of-type { border-top: none; }
-  .day-label { font-size: 12px; font-weight: 700; color: var(--text2); min-width: 84px; }
-  .slot { display: flex; align-items: center; gap: 5px; }
-  .slot-name { font-size: 11px; color: var(--text3); width: 42px; }
+  .day-grid { display: grid; grid-template-columns: 1fr auto auto; column-gap: 14px; row-gap: 0; align-items: center; }
+  .day-grid-head { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .3px; text-align: center; padding-bottom: 4px; }
+  .day-grid-head.spacer { text-align: left; }
+  .day-row { display: contents; }
+  .day-row > * { padding: 8px 0; border-top: 1px solid var(--border); }
+  .day-row:first-of-type > * { border-top: none; }
+  .day-label { font-size: 12px; font-weight: 700; color: var(--text2); }
+  .slot { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+  .slot-name { display: none; }
   .dots { display: flex; gap: 4px; }
   .dot { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--border); }
   .dot.on { background: var(--accent); border-color: var(--accent); }
@@ -402,17 +406,23 @@ function dayGridHtml(cid) {
   const days = [...new Set(ms.map(m => dayKey(m.ts)))].slice(0, DAYS);
   if (!days.length) return `<p class="empty">Aucune mesure encore. Ajoute ta première série du matin.</p>`;
   const dots = (n) => Array.from({length: PER_SLOT}, (_, i) => `<span class="dot ${i < n ? "on" : ""}"></span>`).join("");
-  return days.map((dk, i) => {
+  const rows = days.map((dk, i) => {
     const dms = ms.filter(m => dayKey(m.ts) === dk);
     const morn = dms.filter(m => slotOf(m.ts) === "morning").length;
     const eve = dms.filter(m => slotOf(m.ts) === "evening").length;
     const label = fmtDate(dms[0].ts);
     return `<div class="day-row">
       <span class="day-label">J${i+1} · ${label}</span>
-      <span class="slot"><span class="slot-name">Matin</span><span class="dots">${dots(Math.min(morn,PER_SLOT))}</span></span>
-      <span class="slot"><span class="slot-name">Soir</span><span class="dots">${dots(Math.min(eve,PER_SLOT))}</span></span>
+      <span class="slot"><span class="dots">${dots(Math.min(morn,PER_SLOT))}</span></span>
+      <span class="slot"><span class="dots">${dots(Math.min(eve,PER_SLOT))}</span></span>
     </div>`;
   }).join("");
+  return `<div class="day-grid">
+      <span class="day-grid-head spacer">Jour</span>
+      <span class="day-grid-head">Matin</span>
+      <span class="day-grid-head">Soir</span>
+      ${rows}
+    </div>`;
 }
 
 function verdictHtml(st, complete) {
