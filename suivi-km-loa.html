@@ -130,12 +130,16 @@
 
   .empty { text-align: center; color: var(--text3); font-size: 13px; padding: 28px 0; }
   .entry-list { border: 1px solid #eef1f5; border-radius: 8px; overflow: hidden; }
-  .entry { display: flex; align-items: center; padding: 10px 12px; gap: 8px; font-size: 13px; }
+  .entry { display: flex; align-items: center; padding: 10px 12px; gap: 10px; font-size: 13px; }
   .entry:nth-child(even) { background: #fafbfc; }
-  .entry-date { flex: 1; color: var(--text2); font-size: 12px; }
-  .entry-km { font-weight: 700; font-family: var(--font-mono); flex: 1; text-align: right; }
-  .entry-delta { font-size: 11px; font-weight: 600; font-family: var(--font-mono); width: 72px; text-align: right; }
-  .entry-actions { display: flex; gap: 2px; margin-left: 4px; }
+  /* La date prend l'espace restant et reste lisible en entier ; compteur et
+     écart sont empilés à droite en largeur intrinsèque (sinon flex:1 sur le
+     compteur volait la moitié de la ligne et tronquait la date — fix S24). */
+  .entry-date { flex: 1 1 auto; min-width: 0; color: var(--text2); font-size: 12px; }
+  .entry-vals { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+  .entry-km { font-weight: 700; font-family: var(--font-mono); white-space: nowrap; }
+  .entry-delta { font-size: 11px; font-weight: 600; font-family: var(--font-mono); white-space: nowrap; }
+  .entry-actions { display: flex; gap: 2px; flex: 0 0 auto; }
   .entry-actions button { background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text3); padding: 4px 8px; border-radius: 4px; }
   .entry-actions button:hover { background: #eef1f5; }
   .entry-actions .del:hover { color: var(--danger); }
@@ -440,7 +444,7 @@ function render() {
         <div class="entry-list">${[...sorted].reverse().map(e=>{
           const d=new Date(e.date);const dfs=Math.max(0,daysBetween(C.start,d));const exp=Math.round(C.kmPerDay*dfs);const diff=e.km-exp;
           const isEditing = editingId===e.id;
-          return`<div class="entry"><div class="entry-date">${d.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}</div><div class="entry-km">${isEditing?`<input class="edit-input" type="text" inputmode="numeric" pattern="[0-9]*" id="editInput" value="${esc(String(editKmVal))}" onkeydown="if(event.key==='Enter')saveEdit('${e.id}')">`:`${fmtNum(e.km)} km`}</div><div class="entry-delta" style="color:${diff>0?'#e5393f':'#0d9668'}">${diff>0?'+':''}${fmtNum(diff)}</div><div class="entry-actions">${isEditing?`<button onclick="saveEdit('${e.id}')" aria-label="Valider">✓</button>`:`<button onclick="startEdit('${e.id}',${e.km})" aria-label="Modifier le relevé">✎</button>`}<button class="del" onclick="deleteEntry('${e.id}')" aria-label="Supprimer le relevé">✕</button></div></div>`;
+          return`<div class="entry"><div class="entry-date">${d.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}</div><div class="entry-vals"><div class="entry-km">${isEditing?`<input class="edit-input" type="text" inputmode="numeric" pattern="[0-9]*" id="editInput" value="${esc(String(editKmVal))}" onkeydown="if(event.key==='Enter')saveEdit('${e.id}')">`:`${fmtNum(e.km)} km`}</div><div class="entry-delta" style="color:${diff>0?'#e5393f':'#0d9668'}">${diff>0?'+':''}${fmtNum(diff)} km</div></div><div class="entry-actions">${isEditing?`<button onclick="saveEdit('${e.id}')" aria-label="Valider">✓</button>`:`<button onclick="startEdit('${e.id}',${e.km})" aria-label="Modifier le relevé">✎</button>`}<button class="del" onclick="deleteEntry('${e.id}')" aria-label="Supprimer le relevé">✕</button></div></div>`;
         }).join('')}</div>`}
     </div>
     <div class="footer">Pock · Données stockées localement</div>
