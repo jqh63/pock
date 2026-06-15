@@ -447,39 +447,39 @@ function scaleLegendHtml() {
 // Couleurs des 6 niveaux (mêmes teintes que les classes .lvN), pour le SVG.
 const LV_COLOR = ["#3f8da0", "#0d9668", "#a16207", "#b45309", "#c2410c", "#dc2626"];
 
+// Sous-niveau d'une valeur seule (sa propre échelle) — sert à colorer chaque
+// point selon SA classification, indépendamment de l'autre. SYS et DIA ont des
+// seuils distincts : on s'intéresse aux DEUX, chacune jugée sur la bonne grille.
+function sysLv(s) { return s < 90 ? 0 : s < 130 ? 1 : s < TH_SYS ? 2 : s < 160 ? 3 : s < 180 ? 4 : 5; }
+function diaLv(d) { return d < 60 ? 0 : d < 80 ? 1 : d < TH_DIA ? 2 : d < 100 ? 3 : d < 110 ? 4 : 5; }
+
 function chartHtml() {
   const pts = measures.slice().sort((a,b) => a.ts - b.ts).slice(-30);
   if (pts.length < 2) return "";
-  const W = Math.max(320, pts.length * 22), H = 170, pad = 22, padR = 30;
+  const W = Math.max(320, pts.length * 22), H = 160, pad = 22;
   const ymin = 50, ymax = 200;
-  const x = (i) => pad + i * (W - pad - padR) / Math.max(1, pts.length - 1);
+  const x = (i) => pad + i * (W - 2*pad) / (pts.length - 1);
   const y = (v) => H - pad - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - 2*pad) / (ymax - ymin);
 
-  // Lignes de repère horizontales + étiquettes mmHg à droite (façon appli santé).
-  const grid = [75, 100, 125, 150, 175].map(v =>
-    `<line x1="${pad}" y1="${y(v).toFixed(1)}" x2="${W-padR}" y2="${y(v).toFixed(1)}" stroke="#e2e7ed" stroke-width="1"/>`
-    + `<text x="${W-padR+4}" y="${(y(v)+3).toFixed(1)}" font-size="9" fill="#94a3b8">${v}</text>`
-  ).join("");
-  // Seuil HAS systolique (135) — repère pointillé discret.
-  const th = `<line x1="${pad}" y1="${y(TH_SYS).toFixed(1)}" x2="${W-padR}" y2="${y(TH_SYS).toFixed(1)}" stroke="#475569" stroke-width="1" stroke-dasharray="3 3" opacity="0.45"/>`;
+  // Deux seuils HAS dédiés : 135 (systolique) et 85 (diastolique). Chaque
+  // courbe a SA référence → la diastolique n'est plus lue sur l'échelle systolique.
+  const thLine = (v, lbl) => `<line x1="${pad}" y1="${y(v).toFixed(1)}" x2="${W-pad}" y2="${y(v).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/><text x="${pad+2}" y="${(y(v)-3).toFixed(1)}" font-size="8.5" fill="#94a3b8">${lbl}</text>`;
 
-  // Une barre verticale par mesure : du diastolique (bas) au systolique (haut),
-  // colorée par classification (le pire des deux, comme l'échelle). Capsule
-  // arrondie + cercles ouverts aux extrémités → lecture SYS en haut, DIA en bas.
-  const bw = Math.min(11, (W - pad - padR) / pts.length * 0.62);
-  const r = bw / 2;
-  const bars = pts.map((p, i) => {
-    const c = LV_COLOR[bpLevel(p.sys, p.dia)];
-    const xc = x(i), ys = y(p.sys), yd = y(p.dia);
-    return `<rect x="${(xc-r).toFixed(1)}" y="${ys.toFixed(1)}" width="${bw.toFixed(1)}" height="${(yd-ys).toFixed(1)}" rx="${r.toFixed(1)}" fill="${c}" opacity="0.5"/>`
-      + `<circle cx="${xc.toFixed(1)}" cy="${ys.toFixed(1)}" r="${(r*0.85).toFixed(1)}" fill="#fff" stroke="${c}" stroke-width="2"/>`
-      + `<circle cx="${xc.toFixed(1)}" cy="${yd.toFixed(1)}" r="${(r*0.85).toFixed(1)}" fill="#fff" stroke="${c}" stroke-width="2"/>`;
-  }).join("");
+  const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
+
+  // Point coloré sur chaque mesure, niveau calculé sur SA propre valeur :
+  // une systolique qui décroche rougit son point sans fausser la diastolique
+  // (et inversement). On voit d'un coup laquelle des deux sort des clous.
+  const dots = (key, lvFn) => pts.map((p,i) =>
+    `<circle cx="${x(i).toFixed(1)}" cy="${y(p[key]).toFixed(1)}" r="3.2" fill="${LV_COLOR[lvFn(p[key])]}" stroke="#fff" stroke-width="1.5"/>`
+  ).join("");
 
   return `<div class="card"><div class="card-title">Évolution (30 dernières mesures)</div>
-    <div class="chart-legend"><span style="color:var(--text3)">Chaque barre : diastolique → systolique · couleur = classification</span></div>
-    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Histogramme de tension : une barre par mesure, du diastolique au systolique, colorée selon la classification">
-      ${grid}${th}${bars}
+    <div class="chart-legend"><span><b style="color:var(--accent)">—</b> Systolique</span><span><b style="color:#3563e9">—</b> Diastolique</span><span style="color:var(--text3)">point coloré = niveau de la valeur</span></div>
+    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbes systolique et diastolique, chaque point coloré selon le niveau de sa propre valeur, avec les seuils 135 et 85">
+      ${thLine(TH_SYS, "135")}${thLine(TH_DIA, "85")}
+      ${line("dia", "#3563e9")}${line("sys", "var(--accent)")}
+      ${dots("dia", diaLv)}${dots("sys", sysLv)}
     </svg></div></div>`;
 }
 
