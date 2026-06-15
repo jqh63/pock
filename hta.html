@@ -138,9 +138,6 @@
   /* Chart */
   .chart-wrap { overflow-x: auto; }
   .chart-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text3); margin-bottom: 8px; }
-  .chart-legend span::before { content: ''; display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
-  .lg-sys::before { background: var(--accent); }
-  .lg-dia::before { background: #3563e9; }
 </style>
 </head>
 <body>
@@ -453,38 +450,36 @@ const LV_COLOR = ["#3f8da0", "#0d9668", "#a16207", "#b45309", "#c2410c", "#dc262
 function chartHtml() {
   const pts = measures.slice().sort((a,b) => a.ts - b.ts).slice(-30);
   if (pts.length < 2) return "";
-  const W = Math.max(320, pts.length * 20), H = 150, pad = 24;
+  const W = Math.max(320, pts.length * 22), H = 170, pad = 22, padR = 30;
   const ymin = 50, ymax = 200;
-  const x = (i) => pad + i * (W - 2*pad) / (pts.length - 1);
+  const x = (i) => pad + i * (W - pad - padR) / Math.max(1, pts.length - 1);
   const y = (v) => H - pad - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - 2*pad) / (ymax - ymin);
 
-  // Zones de classification horizontales (fond) — calées sur l'échelle
-  // SYSTOLIQUE en mmHg, du plus bas (hypotension) au plus haut (HTA forte).
-  // Lecture directe : voir la courbe SYS grimper dans l'orange/rouge = alerte.
-  // La courbe DIA reste lue via sa ligne de seuil dédiée (85) + l'échelle de
-  // la carte « Échelle ». Bandes en faible opacité pour rester sous les courbes.
-  const ZONES = [
-    { from: ymin,   to: 90,     lv: 0 },   // hypotension
-    { from: 90,     to: 130,    lv: 1 },   // normale
-    { from: 130,    to: TH_SYS, lv: 2 },   // normale haute
-    { from: TH_SYS, to: 160,    lv: 3 },   // légèrement élevée (≥ seuil HAS)
-    { from: 160,    to: 180,    lv: 4 },   // HTA modérée
-    { from: 180,    to: ymax,   lv: 5 },   // HTA forte
-  ];
-  const bands = ZONES.map(z => {
-    const yt = y(z.to), h = y(z.from) - y(z.to);
-    return `<rect x="0" y="${yt.toFixed(1)}" width="${W}" height="${h.toFixed(1)}" fill="${LV_COLOR[z.lv]}" opacity="0.13"/>`;
+  // Lignes de repère horizontales + étiquettes mmHg à droite (façon appli santé).
+  const grid = [75, 100, 125, 150, 175].map(v =>
+    `<line x1="${pad}" y1="${y(v).toFixed(1)}" x2="${W-padR}" y2="${y(v).toFixed(1)}" stroke="#e2e7ed" stroke-width="1"/>`
+    + `<text x="${W-padR+4}" y="${(y(v)+3).toFixed(1)}" font-size="9" fill="#94a3b8">${v}</text>`
+  ).join("");
+  // Seuil HAS systolique (135) — repère pointillé discret.
+  const th = `<line x1="${pad}" y1="${y(TH_SYS).toFixed(1)}" x2="${W-padR}" y2="${y(TH_SYS).toFixed(1)}" stroke="#475569" stroke-width="1" stroke-dasharray="3 3" opacity="0.45"/>`;
+
+  // Une barre verticale par mesure : du diastolique (bas) au systolique (haut),
+  // colorée par classification (le pire des deux, comme l'échelle). Capsule
+  // arrondie + cercles ouverts aux extrémités → lecture SYS en haut, DIA en bas.
+  const bw = Math.min(11, (W - pad - padR) / pts.length * 0.62);
+  const r = bw / 2;
+  const bars = pts.map((p, i) => {
+    const c = LV_COLOR[bpLevel(p.sys, p.dia)];
+    const xc = x(i), ys = y(p.sys), yd = y(p.dia);
+    return `<rect x="${(xc-r).toFixed(1)}" y="${ys.toFixed(1)}" width="${bw.toFixed(1)}" height="${(yd-ys).toFixed(1)}" rx="${r.toFixed(1)}" fill="${c}" opacity="0.5"/>`
+      + `<circle cx="${xc.toFixed(1)}" cy="${ys.toFixed(1)}" r="${(r*0.85).toFixed(1)}" fill="#fff" stroke="${c}" stroke-width="2"/>`
+      + `<circle cx="${xc.toFixed(1)}" cy="${yd.toFixed(1)}" r="${(r*0.85).toFixed(1)}" fill="#fff" stroke="${c}" stroke-width="2"/>`;
   }).join("");
 
-  const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
-  const thLine = (v, lbl) => `<line x1="${pad}" y1="${y(v)}" x2="${W-pad}" y2="${y(v)}" stroke="#475569" stroke-width="1" stroke-dasharray="3 3" opacity="0.65"/><text x="${pad+2}" y="${(y(v)-3).toFixed(1)}" font-size="9" fill="#475569">${lbl}</text>`;
-
   return `<div class="card"><div class="card-title">Évolution (30 dernières mesures)</div>
-    <div class="chart-legend"><span class="lg-sys">Systolique</span><span class="lg-dia">Diastolique</span><span style="color:var(--text3)">fond = zones de classification (éch. systolique)</span></div>
-    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbe d'évolution de la tension sur fond de zones de classification HTA (échelle systolique)">
-      ${bands}
-      ${thLine(TH_SYS, "135")}${thLine(TH_DIA, "85")}
-      ${line("dia", "#3563e9")}${line("sys", "var(--accent)")}
+    <div class="chart-legend"><span style="color:var(--text3)">Chaque barre : diastolique → systolique · couleur = classification</span></div>
+    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Histogramme de tension : une barre par mesure, du diastolique au systolique, colorée selon la classification">
+      ${grid}${th}${bars}
     </svg></div></div>`;
 }
 
