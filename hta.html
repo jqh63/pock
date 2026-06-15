@@ -100,7 +100,10 @@
   .hist-item:first-child { border-top: none; }
   .hist-main { font-family: var(--font-mono); font-size: 15px; font-weight: 600; }
   .hist-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
-  .pill { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; white-space: nowrap; background: var(--bg); color: var(--c); border: 1px solid var(--bd); }
+  /* Classification d'un cycle : point coloré + libellé inline (pas de pastille
+     à fond opaque qui recouvrait le texte voisin sur mobile). Posé dans la
+     colonne info, jamais dans la barre d'actions → zéro chevauchement. */
+  .lvl-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--c); margin-top: 4px; }
   .empty { text-align: center; color: var(--text3); font-size: 13px; padding: 18px 0; }
   .hist-info { min-width: 0; flex: 1; }
   .hist-unit { font-size: 11px; color: var(--text3); font-weight: 500; white-space: nowrap; }
@@ -454,25 +457,31 @@ function chartHtml() {
   const ymin = 50, ymax = 200;
   const x = (i) => pad + i * (W - 2*pad) / (pts.length - 1);
   const y = (v) => H - pad - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - 2*pad) / (ymax - ymin);
-  const slot = (W - 2*pad) / Math.max(1, pts.length - 1);
 
-  // Fonds verticaux : une bande teintée UNIQUEMENT quand la mesure est hors
-  // normale (lv 0 = hypotension, ou lv ≥ 3 = ≥ seuil HTA). Le niveau combine
-  // SYS et DIA (le pire des deux), donc le fond se déclenche si l'un OU l'autre
-  // décroche — c'est la prise en compte « paire » des deux valeurs.
-  const bands = pts.map((p, i) => {
-    const lv = bpLevel(p.sys, p.dia);
-    if (lv === 1 || lv === 2) return "";            // dans la normale → pas de fond
-    const w = slot * 0.92;
-    return `<rect x="${(x(i) - w/2).toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${H}" fill="${LV_COLOR[lv]}" opacity="0.14"/>`;
+  // Zones de classification horizontales (fond) — calées sur l'échelle
+  // SYSTOLIQUE en mmHg, du plus bas (hypotension) au plus haut (HTA forte).
+  // Lecture directe : voir la courbe SYS grimper dans l'orange/rouge = alerte.
+  // La courbe DIA reste lue via sa ligne de seuil dédiée (85) + l'échelle de
+  // la carte « Échelle ». Bandes en faible opacité pour rester sous les courbes.
+  const ZONES = [
+    { from: ymin,   to: 90,     lv: 0 },   // hypotension
+    { from: 90,     to: 130,    lv: 1 },   // normale
+    { from: 130,    to: TH_SYS, lv: 2 },   // normale haute
+    { from: TH_SYS, to: 160,    lv: 3 },   // légèrement élevée (≥ seuil HAS)
+    { from: 160,    to: 180,    lv: 4 },   // HTA modérée
+    { from: 180,    to: ymax,   lv: 5 },   // HTA forte
+  ];
+  const bands = ZONES.map(z => {
+    const yt = y(z.to), h = y(z.from) - y(z.to);
+    return `<rect x="0" y="${yt.toFixed(1)}" width="${W}" height="${h.toFixed(1)}" fill="${LV_COLOR[z.lv]}" opacity="0.13"/>`;
   }).join("");
 
   const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
-  const thLine = (v, lbl) => `<line x1="${pad}" y1="${y(v)}" x2="${W-pad}" y2="${y(v)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/><text x="${pad+2}" y="${(y(v)-3).toFixed(1)}" font-size="9" fill="#94a3b8">${lbl}</text>`;
+  const thLine = (v, lbl) => `<line x1="${pad}" y1="${y(v)}" x2="${W-pad}" y2="${y(v)}" stroke="#475569" stroke-width="1" stroke-dasharray="3 3" opacity="0.65"/><text x="${pad+2}" y="${(y(v)-3).toFixed(1)}" font-size="9" fill="#475569">${lbl}</text>`;
 
   return `<div class="card"><div class="card-title">Évolution (30 dernières mesures)</div>
-    <div class="chart-legend"><span class="lg-sys">Systolique</span><span class="lg-dia">Diastolique</span><span style="color:var(--text3)">▮ fond = mesure hors normale</span></div>
-    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbe d'évolution de la tension avec fonds colorés hors normale">
+    <div class="chart-legend"><span class="lg-sys">Systolique</span><span class="lg-dia">Diastolique</span><span style="color:var(--text3)">fond = zones de classification (éch. systolique)</span></div>
+    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbe d'évolution de la tension sur fond de zones de classification HTA (échelle systolique)">
       ${bands}
       ${thLine(TH_SYS, "135")}${thLine(TH_DIA, "85")}
       ${line("dia", "#3563e9")}${line("sys", "var(--accent)")}
@@ -570,9 +579,9 @@ function render() {
         <div class="hist-item">
           <div class="hist-info">
             <div class="hist-main">${st.sys}/${st.dia}<span class="hist-unit"> mmHg${st.pulse ? " · "+st.pulse+" bpm" : ""}</span></div>
-            <div class="hist-sub">${fmtDate(c.startedAt)} · ${st.count}/${TOTAL} mesures</div></div>
+            <div class="hist-sub">${fmtDate(c.startedAt)} · ${st.count}/${TOTAL} mesures</div>
+            <div class="lvl-tag lv${st.lvl}"><span class="lvl-dot"></span>${BP_LEVELS[st.lvl].label}</div></div>
           <div class="hist-actions">
-            <span class="pill lv${st.lvl}">${BP_LEVELS[st.lvl].label}</span>
             <button class="btn-ghost" onclick="shareReport('${c.id}')" aria-label="Rapport médecin">📋</button>
             <button class="btn-ghost" onclick="deleteCampaign('${c.id}')" aria-label="Supprimer le cycle">✕</button></div>
         </div>
