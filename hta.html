@@ -138,6 +138,16 @@
   /* Chart */
   .chart-wrap { overflow-x: auto; }
   .chart-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+
+  /* Hero « dernière mesure » */
+  .hero-bp { font-size: 30px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; color: var(--text); }
+  .hero-bp .hist-unit { font-weight: 500; }
+
+  /* Échelle repliable (référence, bas de page) */
+  .scale-card > summary { cursor: pointer; list-style: none; }
+  .scale-card > summary::-webkit-details-marker { display: none; }
+  .scale-card > summary::before { content: "▸ "; color: var(--text3); }
+  .scale-card[open] > summary::before { content: "▾ "; color: var(--text3); }
 </style>
 </head>
 <body>
@@ -435,12 +445,26 @@ function verdictHtml(st, complete) {
     </div>`;
 }
 
+// Référence repliée par défaut (en bas de page) : c'est de la doc, pas du suivi.
 function scaleLegendHtml() {
   const items = BP_LEVELS.map(b => `<span class="scale-item lv${b.lv}"><span class="sw"></span><b>${b.label}</b></span>`).join("");
-  return `<div class="card">
-      <div class="card-title">Échelle (automesure)</div>
-      <div class="scale">${items}</div>
+  return `<details class="card scale-card">
+      <summary class="card-title">Échelle & repères (automesure)</summary>
+      <div class="scale" style="margin-top:12px">${items}</div>
       <p class="disclaimer">Repères indicatifs ancrés sur le seuil HAS d'automesure (HTA ≥ ${TH_SYS}/${TH_DIA} mmHg, vs 140/90 en cabinet). Classement par la valeur la plus haute entre systolique et diastolique. <b>Ne remplace pas un avis médical</b> — une valeur ≥ 180/110 justifie de contacter un médecin.</p>
+    </details>`;
+}
+
+// Hero « dernière mesure » : statut immédiat à l'ouverture, hors cycle actif.
+function lastMeasureHeroHtml() {
+  if (!measures.length) return "";
+  const m = measures.slice().sort((a,b) => b.ts - a.ts)[0];
+  const lv = bpLevel(m.sys, m.dia);
+  return `<div class="card hero-card">
+      <div class="card-title">Dernière mesure</div>
+      <div class="hero-bp">${m.sys}/${m.dia}<span class="hist-unit"> mmHg${m.pulse ? " · " + m.pulse + " bpm" : ""}</span></div>
+      <div class="hist-sub">${fmtDate(m.ts)} · ${fmtTime(m.ts)}</div>
+      <div class="lvl-tag lv${lv}"><span class="lvl-dot"></span>${BP_LEVELS[lv].label}</div>
     </div>`;
 }
 
@@ -595,6 +619,7 @@ function render() {
       <button class="btn-ghost" onclick="deleteCampaign('${ac.id}')">Abandonner ce cycle</button>
     </div>`;
   } else {
+    html += lastMeasureHeroHtml();
     html += `<div class="card">
       <div class="card-title">Nouveau cycle</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Le protocole d'automesure : 3 mesures le matin (avant petit-déjeuner et médicaments) et 3 le soir, pendant 3 jours consécutifs. La moyenne des 18 est comparée au seuil ${TH_SYS}/${TH_DIA}.</p>
@@ -606,8 +631,7 @@ function render() {
     </div>`;
   }
 
-  // Légende + courbe
-  html += scaleLegendHtml();
+  // Courbe juste après la zone d'action — cœur du suivi.
   html += chartHtml();
 
   // --- Historique (bas) ---
@@ -643,6 +667,9 @@ function render() {
   if (!measures.length && !campaigns.length) {
     html += `<p class="empty">Aucune donnée — démarre un cycle ou ajoute une mesure ponctuelle ci-dessus.</p>`;
   }
+
+  // Référence (échelle + disclaimer), repliée, en bas de page.
+  html += scaleLegendHtml();
 
   document.getElementById("app").innerHTML = html;
 }
