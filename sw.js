@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pock-v35';
+const CACHE_NAME = 'pock-v36';
 const ASSETS = [
   './',
   './index.html',
@@ -28,9 +28,13 @@ function precache(c) {
 }
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(precache).then(() => self.skipWaiting())
-  );
+  // skipWaiting() appelé tout de suite (hors waitUntil), PAS enchaîné après le
+  // précache : sinon le nouveau SW reste en 'waiting' tant que le fetch réseau
+  // de tous les assets n'est pas fini → controllerchange tardif → l'utilisateur
+  // doit forcer un refresh. Le précache continue dans waitUntil ; les miss
+  // retombent sur le réseau via le handler fetch (acquis de la PWA WoL).
+  e.waitUntil(caches.open(CACHE_NAME).then(precache));
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
