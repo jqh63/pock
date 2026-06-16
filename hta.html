@@ -137,7 +137,11 @@
 
   /* Chart */
   .chart-wrap { overflow-x: auto; }
-  .chart-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+  .chart-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-line { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+  .chart-note { font-size: 10.5px; color: var(--text3); line-height: 1.4; margin-top: 8px; }
+  .chart-note b { color: var(--text2); font-weight: 700; }
 
   /* Hero « dernière mesure » */
   .hero-bp { font-size: 30px; font-weight: 800; font-family: var(--font-mono); letter-spacing: -0.02em; color: var(--text); }
@@ -510,23 +514,26 @@ const SYS_GOAL = [90, TH_SYS], DIA_GOAL = [60, TH_DIA];  // bornes des bandes-ci
 function chartHtml() {
   const pts = slotPoints().slice(-30);   // 30 demi-journées ≈ 15 jours, scroll si plus
   if (pts.length < 2) return "";
-  const W = Math.max(320, pts.length * 30), H = 188;
-  const padX = 24, padTop = 14, padBot = 36;   // padBot : place pour les libellés d'axe
-  const ymin = 50, ymax = 190;
-  const x = (i) => padX + i * (W - 2*padX) / (pts.length - 1);
+  // Gouttière gauche (padL) pour les seuils 135/85 ; padBot pour l'axe matin/soir.
+  const padL = 30, padR = 14, padTop = 14, padBot = 34;
+  const W = Math.max(320, padL + padR + (pts.length - 1) * 30), H = 184;
+  const ymin = 55, ymax = 185;
+  const x = (i) => padL + i * (W - padL - padR) / (pts.length - 1);
   const y = (v) => H - padBot - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - padTop - padBot) / (ymax - ymin);
 
   // Bandes-cibles remplies : menthe (SYS, 90-135) + cacao (DIA, 60-85). Le bord
-  // supérieur de chaque bande EST le seuil HAS → pas besoin de ligne pointillée.
-  const band = (lo, hi, color, lbl) => {
+  // supérieur de chaque bande EST le seuil HAS, étiqueté dans la gouttière gauche
+  // (jamais sur les courbes) → repère chiffré propre sans chevauchement.
+  const band = (lo, hi, color) => {
     const yh = y(hi), yl = y(lo);
-    return `<rect x="${padX}" y="${yh.toFixed(1)}" width="${(W-2*padX).toFixed(1)}" height="${(yl-yh).toFixed(1)}" fill="${color}" opacity="0.13"/>`
-      + `<text x="${(W-padX-2).toFixed(1)}" y="${(yh+10).toFixed(1)}" font-size="8.5" fill="${color}" text-anchor="end" opacity="0.85">${lbl}</text>`;
+    return `<rect x="${padL}" y="${yh.toFixed(1)}" width="${(W-padL-padR).toFixed(1)}" height="${(yl-yh).toFixed(1)}" fill="${color}" opacity="0.13"/>`
+      + `<line x1="${padL}" y1="${yh.toFixed(1)}" x2="${(W-padR).toFixed(1)}" y2="${yh.toFixed(1)}" stroke="${color}" stroke-width="1" opacity="0.4"/>`
+      + `<text x="${(padL-5).toFixed(1)}" y="${(yh+3).toFixed(1)}" font-size="9" fill="${color}" text-anchor="end" font-family="var(--font-mono)">${hi}</text>`;
   };
 
   const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
 
-  // Points couleur de leur ligne. Tooltip = date · slot · valeur · plage du slot.
+  // Points couleur de leur ligne. Tooltip = date · slot · valeur moyenne.
   const dots = (key, color) => pts.map((p,i) => {
     const slotLbl = p.slot === "morning" ? "matin" : "soir";
     const moy = p.n > 1 ? ` · moy. ${p.n} mesures` : "";
@@ -539,19 +546,24 @@ function chartHtml() {
     const mark = p.slot === "morning" ? "M" : "S";
     const day = new Date(p.ts);
     const newDay = i === 0 || dayKey(p.ts) !== dayKey(pts[i-1].ts);
-    const dateLbl = newDay ? `<text x="${cx}" y="${H-6}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${day.getDate()}/${day.getMonth()+1}</text>` : "";
-    return `<text x="${cx}" y="${H-padBot+12}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${mark}</text>${dateLbl}`;
+    const dateLbl = newDay ? `<text x="${cx}" y="${H-5}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${day.getDate()}/${day.getMonth()+1}</text>` : "";
+    return `<text x="${cx}" y="${H-padBot+11}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${mark}</text>${dateLbl}`;
   }).join("");
 
   return `<div class="card"><div class="card-title">Tendance matin / soir</div>
-    <div class="chart-legend"><span><b style="color:${SYS_COLOR}">—</b> Systolique</span><span><b style="color:${DIA_COLOR}">—</b> Diastolique</span><span style="color:var(--text3)">bandes = zones cibles · 1 point = moyenne d'une demi-journée</span></div>
+    <div class="chart-legend">
+      <span><i class="lg-line" style="background:${SYS_COLOR}"></i>Systolique</span>
+      <span><i class="lg-line" style="background:${DIA_COLOR}"></i>Diastolique</span>
+    </div>
     <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbes systolique et diastolique par demi-journée avec bandes cibles remplies : systolique sous 135 en menthe, diastolique sous 85 en cacao. Un point hors de sa bande est hors cible.">
-      ${band(SYS_GOAL[0], SYS_GOAL[1], SYS_COLOR, "cible SYS")}
-      ${band(DIA_GOAL[0], DIA_GOAL[1], DIA_COLOR, "cible DIA")}
+      ${band(SYS_GOAL[0], SYS_GOAL[1], SYS_COLOR)}
+      ${band(DIA_GOAL[0], DIA_GOAL[1], DIA_COLOR)}
       ${line("dia", DIA_COLOR)}${line("sys", SYS_COLOR)}
       ${dots("dia", DIA_COLOR)}${dots("sys", SYS_COLOR)}
       ${xLabels}
-    </svg></div></div>`;
+    </svg></div>
+    <p class="chart-note">Bandes = zones cibles (sous 135 / 85 mmHg) · 1 point = moyenne d'une demi-journée · <b>M</b> matin, <b>S</b> soir</p>
+    </div>`;
 }
 
 // Ligne d'une mesure isolée (historique) : valeur + horodatage + édition inline.
