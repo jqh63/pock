@@ -468,51 +468,69 @@ function slotPoints() {
     g.sys.push(m.sys); g.dia.push(m.dia);
   });
   return [...groups.values()]
-    .map(g => ({ ts: g.ts, slot: g.slot, sys: mean(g.sys), dia: mean(g.dia), n: g.sys.length }))
+    .map(g => ({
+      ts: g.ts, slot: g.slot, n: g.sys.length,
+      sys: mean(g.sys), dia: mean(g.dia),       // corps de la chandelle (moyennes)
+      sMax: Math.max(...g.sys), dMin: Math.min(...g.dia),  // moustaches (extrêmes du slot)
+    }))
     .sort((a, b) => a.ts - b.ts);
 }
 
+// Chandelle par demi-journée (matin/soir), comme un chandelier boursier :
+// corps = ta tension représentative (haut = systolique moy, bas = diastolique
+// moy → la hauteur est la pression pulsée), moustaches = dispersion des mesures
+// du slot (mesure la + haute / la + basse), couleur = niveau HAS de ce slot.
+// Pas de ligne reliant les chandelles → fini le zigzag matin→soir des courbes.
 function chartHtml() {
   const pts = slotPoints().slice(-30);   // 30 demi-journées ≈ 15 jours, scroll si plus
-  if (pts.length < 2) return "";
+  if (pts.length < 1) return "";
   const W = Math.max(320, pts.length * 30), H = 184;
   const padX = 22, padTop = 18, padBot = 36;   // padBot : place pour les libellés d'axe
   const ymin = 50, ymax = 200;
-  const x = (i) => padX + i * (W - 2*padX) / (pts.length - 1);
+  const x = (i) => pts.length === 1 ? W/2 : padX + i * (W - 2*padX) / (pts.length - 1);
   const y = (v) => H - padBot - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - padTop - padBot) / (ymax - ymin);
+  const cw = Math.min(13, (W - 2*padX) / pts.length * 0.55);   // largeur de corps
 
-  // Deux seuils HAS dédiés : 135 (systolique) et 85 (diastolique). Chaque
-  // courbe a SA référence → la diastolique n'est plus lue sur l'échelle systolique.
-  const thLine = (v, lbl) => `<line x1="${padX}" y1="${y(v).toFixed(1)}" x2="${W-padX}" y2="${y(v).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/><text x="${padX+2}" y="${(y(v)-3).toFixed(1)}" font-size="8.5" fill="#94a3b8">${lbl}</text>`;
+  // Zones de fond très légères : dégradé vertical vert (bas, pression faible) →
+  // ambre → rouge (haut). Monotone "plus haut = plus à surveiller" — vrai pour
+  // SYS comme DIA, sans poser de frontière chiffrée fausse sur un axe partagé.
+  const zones = `<defs><linearGradient id="bpZones" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dc2626"/><stop offset="38%" stop-color="#b45309"/>
+      <stop offset="72%" stop-color="#0d9668"/><stop offset="100%" stop-color="#0d9668"/>
+    </linearGradient></defs>
+    <rect x="${padX}" y="${padTop}" width="${(W-2*padX).toFixed(1)}" height="${(H-padTop-padBot).toFixed(1)}" fill="url(#bpZones)" opacity="0.09"/>`;
 
-  const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
+  // Repères HAS : 135 (systolique) et 85 (diastolique), chacun sur SA grille.
+  const thLine = (v, lbl) => `<line x1="${padX}" y1="${y(v).toFixed(1)}" x2="${W-padX}" y2="${y(v).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3" opacity="0.55"/><text x="${padX+2}" y="${(y(v)-3).toFixed(1)}" font-size="8.5" fill="#94a3b8">${lbl}</text>`;
 
-  // Point coloré par demi-journée, niveau calculé sur SA propre valeur moyenne :
-  // une systolique qui décroche rougit son point sans fausser la diastolique
-  // (et inversement). Tooltip = date · slot · valeur · nb de mesures moyennées.
-  const dots = (key, lvFn) => pts.map((p,i) => {
+  const candles = pts.map((p,i) => {
+    const cx = x(i), c = LV_COLOR[bpLevel(p.sys, p.dia)];
+    const top = y(p.sys), bot = y(p.dia), h = Math.max(2, bot - top);
     const slotLbl = p.slot === "morning" ? "matin" : "soir";
-    const moy = p.n > 1 ? ` (moy. ${p.n} mesures)` : "";
-    return `<circle cx="${x(i).toFixed(1)}" cy="${y(p[key]).toFixed(1)}" r="3.4" fill="${LV_COLOR[lvFn(p[key])]}" stroke="#fff" stroke-width="1.5"><title>${fmtDate(p.ts)} · ${slotLbl} · ${p.sys}/${p.dia}${moy}</title></circle>`;
+    const moy = p.n > 1 ? ` · moy. ${p.n} mesures` : "";
+    const plage = p.n > 1 ? ` · plage ${p.dMin}–${p.sMax}` : "";
+    return `<g><title>${fmtDate(p.ts)} · ${slotLbl} · ${p.sys}/${p.dia}${moy}${plage}</title>`
+      + `<line x1="${cx.toFixed(1)}" y1="${y(p.sMax).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${y(p.dMin).toFixed(1)}" stroke="${c}" stroke-width="1.5"/>`
+      + `<rect x="${(cx-cw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${cw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${c}" fill-opacity="0.85" stroke="${c}" stroke-width="1"/>`
+      + `</g>`;
   }).join("");
 
-  // Axe X : marqueur matin (M) / soir (S) sous chaque point + date au changement de jour.
+  // Axe X : marqueur matin (M) / soir (S) sous chaque chandelle + date au changement de jour.
   const xLabels = pts.map((p,i) => {
     const cx = x(i).toFixed(1);
     const mark = p.slot === "morning" ? "M" : "S";
     const day = new Date(p.ts);
-    const prev = i > 0 ? new Date(pts[i-1].ts) : null;
-    const newDay = !prev || dayKey(p.ts) !== dayKey(pts[i-1].ts);
+    const newDay = i === 0 || dayKey(p.ts) !== dayKey(pts[i-1].ts);
     const dateLbl = newDay ? `<text x="${cx}" y="${H-6}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${day.getDate()}/${day.getMonth()+1}</text>` : "";
     return `<text x="${cx}" y="${H-padBot+12}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${mark}</text>${dateLbl}`;
   }).join("");
 
   return `<div class="card"><div class="card-title">Tendance matin / soir</div>
-    <div class="chart-legend"><span><b style="color:var(--accent)">—</b> Systolique</span><span><b style="color:#3563e9">—</b> Diastolique</span><span style="color:var(--text3)">1 point = moyenne d'une demi-journée (M/S)</span></div>
-    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbes de tendance systolique et diastolique, un point par demi-journée (moyenne des mesures matin ou soir), coloré selon le niveau de sa valeur, avec les seuils 135 et 85">
+    <div class="chart-legend"><span style="color:var(--text3)">1 chandelle = une demi-journée (M/S)</span><span style="color:var(--text3)">corps = SYS↕DIA moyens · moustaches = mini/maxi · couleur = niveau</span></div>
+    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Chandelles de tension par demi-journée : corps de la systolique à la diastolique moyennes, moustaches aux mesures extrêmes du slot, couleur selon le niveau, fond dégradé vert à rouge et repères 135 et 85">
+      ${zones}
       ${thLine(TH_SYS, "135")}${thLine(TH_DIA, "85")}
-      ${line("dia", "#3563e9")}${line("sys", "var(--accent)")}
-      ${dots("dia", diaLv)}${dots("sys", sysLv)}
+      ${candles}
       ${xLabels}
     </svg></div></div>`;
 }
