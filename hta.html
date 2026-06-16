@@ -459,8 +459,21 @@ function scaleLegendHtml() {
     </details>`;
 }
 
-// Hero « dernière mesure » : statut immédiat à l'ouverture, hors cycle actif.
-function lastMeasureHeroHtml() {
+// Hero de statut (hors cycle actif) : priorité au dernier CYCLE terminé — sa
+// moyenne est le chiffre cliniquement pertinent du protocole, bien plus parlant
+// qu'une mesure isolée. Repli sur la dernière mesure ponctuelle s'il n'y a pas
+// encore de cycle.
+function statusHeroHtml() {
+  const lastCycle = campaigns.filter(c => c.endedAt).sort((a,b) => b.endedAt - a.endedAt)[0];
+  const st = lastCycle && campStats(lastCycle.id);
+  if (st) {
+    return `<div class="card hero-card">
+      <div class="card-title">Dernier cycle</div>
+      <div class="hero-bp">${st.sys}/${st.dia}<span class="hist-unit"> mmHg${st.pulse ? " · " + st.pulse + " bpm" : ""}</span></div>
+      <div class="hist-sub">Moyenne sur ${st.count} mesures · ${fmtDate(lastCycle.startedAt)}</div>
+      <div class="lvl-tag lv${st.lvl}"><span class="lvl-dot"></span>${BP_LEVELS[st.lvl].label}</div>
+    </div>`;
+  }
   if (!measures.length) return "";
   const m = measures.slice().sort((a,b) => b.ts - a.ts)[0];
   const lv = bpLevel(m.sys, m.dia);
@@ -517,7 +530,11 @@ function chartHtml() {
   // Gouttière gauche (padL) pour les seuils 135/85 ; padBot pour l'axe matin/soir.
   const padL = 30, padR = 14, padTop = 14, padBot = 34;
   const W = Math.max(320, padL + padR + (pts.length - 1) * 30), H = 184;
-  const ymin = 55, ymax = 185;
+  // Cadrage Y dynamique ancré sur les bandes : on garantit de toujours voir la
+  // bande DIA (bas 60) et la bande SYS (haut 135), et on ne s'étend au-delà que
+  // si une mesure dépasse — fini le grand vide en haut quand tout est normal.
+  const lo = Math.min(...pts.map(p => p.dia)), hi = Math.max(...pts.map(p => p.sys));
+  const ymin = Math.min(DIA_GOAL[0] - 2, lo - 6), ymax = Math.max(TH_SYS + 12, hi + 8);
   const x = (i) => padL + i * (W - padL - padR) / (pts.length - 1);
   const y = (v) => H - padBot - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - padTop - padBot) / (ymax - ymin);
 
@@ -631,7 +648,7 @@ function render() {
       <button class="btn-ghost" onclick="deleteCampaign('${ac.id}')">Abandonner ce cycle</button>
     </div>`;
   } else {
-    html += lastMeasureHeroHtml();
+    html += statusHeroHtml();
     html += `<div class="card">
       <div class="card-title">Nouveau cycle</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Le protocole d'automesure : 3 mesures le matin (avant petit-déjeuner et médicaments) et 3 le soir, pendant 3 jours consécutifs. La moyenne des 18 est comparée au seuil ${TH_SYS}/${TH_DIA}.</p>
