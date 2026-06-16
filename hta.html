@@ -453,33 +453,67 @@ const LV_COLOR = ["#3f8da0", "#0d9668", "#a16207", "#b45309", "#c2410c", "#dc262
 function sysLv(s) { return s < 90 ? 0 : s < 130 ? 1 : s < TH_SYS ? 2 : s < 160 ? 3 : s < 180 ? 4 : 5; }
 function diaLv(d) { return d < 60 ? 0 : d < 80 ? 1 : d < TH_DIA ? 2 : d < 100 ? 3 : d < 110 ? 4 : 5; }
 
+// Agrège les mesures par demi-journée (matin/soir). La « règle des 3 » produit
+// jusqu'à 3 mesures par slot : on les moyenne en UN point de tendance, bien plus
+// lisible et représentatif que 3 points bruités collés (c'est aussi l'unité que
+// lit le protocole HAS — moyenne du matin vs moyenne du soir).
+function slotPoints() {
+  const groups = new Map();   // "dayKey|slot" -> {ts, slot, sys[], dia[]}
+  measures.forEach(m => {
+    const slot = slotOf(m.ts);
+    const k = dayKey(m.ts) + "|" + slot;
+    let g = groups.get(k);
+    if (!g) { g = { ts: m.ts, slot, sys: [], dia: [] }; groups.set(k, g); }
+    g.ts = Math.min(g.ts, m.ts);   // ancrer le point au début du slot
+    g.sys.push(m.sys); g.dia.push(m.dia);
+  });
+  return [...groups.values()]
+    .map(g => ({ ts: g.ts, slot: g.slot, sys: mean(g.sys), dia: mean(g.dia), n: g.sys.length }))
+    .sort((a, b) => a.ts - b.ts);
+}
+
 function chartHtml() {
-  const pts = measures.slice().sort((a,b) => a.ts - b.ts).slice(-30);
+  const pts = slotPoints().slice(-30);   // 30 demi-journées ≈ 15 jours, scroll si plus
   if (pts.length < 2) return "";
-  const W = Math.max(320, pts.length * 22), H = 160, pad = 22;
+  const W = Math.max(320, pts.length * 30), H = 184;
+  const padX = 22, padTop = 18, padBot = 36;   // padBot : place pour les libellés d'axe
   const ymin = 50, ymax = 200;
-  const x = (i) => pad + i * (W - 2*pad) / (pts.length - 1);
-  const y = (v) => H - pad - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - 2*pad) / (ymax - ymin);
+  const x = (i) => padX + i * (W - 2*padX) / (pts.length - 1);
+  const y = (v) => H - padBot - (Math.max(ymin, Math.min(ymax, v)) - ymin) * (H - padTop - padBot) / (ymax - ymin);
 
   // Deux seuils HAS dédiés : 135 (systolique) et 85 (diastolique). Chaque
   // courbe a SA référence → la diastolique n'est plus lue sur l'échelle systolique.
-  const thLine = (v, lbl) => `<line x1="${pad}" y1="${y(v).toFixed(1)}" x2="${W-pad}" y2="${y(v).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/><text x="${pad+2}" y="${(y(v)-3).toFixed(1)}" font-size="8.5" fill="#94a3b8">${lbl}</text>`;
+  const thLine = (v, lbl) => `<line x1="${padX}" y1="${y(v).toFixed(1)}" x2="${W-padX}" y2="${y(v).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/><text x="${padX+2}" y="${(y(v)-3).toFixed(1)}" font-size="8.5" fill="#94a3b8">${lbl}</text>`;
 
   const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p,i) => x(i).toFixed(1)+","+y(p[key]).toFixed(1)).join(" ")}"/>`;
 
-  // Point coloré sur chaque mesure, niveau calculé sur SA propre valeur :
+  // Point coloré par demi-journée, niveau calculé sur SA propre valeur moyenne :
   // une systolique qui décroche rougit son point sans fausser la diastolique
-  // (et inversement). On voit d'un coup laquelle des deux sort des clous.
-  const dots = (key, lvFn) => pts.map((p,i) =>
-    `<circle cx="${x(i).toFixed(1)}" cy="${y(p[key]).toFixed(1)}" r="3.2" fill="${LV_COLOR[lvFn(p[key])]}" stroke="#fff" stroke-width="1.5"/>`
-  ).join("");
+  // (et inversement). Tooltip = date · slot · valeur · nb de mesures moyennées.
+  const dots = (key, lvFn) => pts.map((p,i) => {
+    const slotLbl = p.slot === "morning" ? "matin" : "soir";
+    const moy = p.n > 1 ? ` (moy. ${p.n} mesures)` : "";
+    return `<circle cx="${x(i).toFixed(1)}" cy="${y(p[key]).toFixed(1)}" r="3.4" fill="${LV_COLOR[lvFn(p[key])]}" stroke="#fff" stroke-width="1.5"><title>${fmtDate(p.ts)} · ${slotLbl} · ${p.sys}/${p.dia}${moy}</title></circle>`;
+  }).join("");
 
-  return `<div class="card"><div class="card-title">Évolution (30 dernières mesures)</div>
-    <div class="chart-legend"><span><b style="color:var(--accent)">—</b> Systolique</span><span><b style="color:#3563e9">—</b> Diastolique</span><span style="color:var(--text3)">point coloré = niveau de la valeur</span></div>
-    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbes systolique et diastolique, chaque point coloré selon le niveau de sa propre valeur, avec les seuils 135 et 85">
+  // Axe X : marqueur matin (M) / soir (S) sous chaque point + date au changement de jour.
+  const xLabels = pts.map((p,i) => {
+    const cx = x(i).toFixed(1);
+    const mark = p.slot === "morning" ? "M" : "S";
+    const day = new Date(p.ts);
+    const prev = i > 0 ? new Date(pts[i-1].ts) : null;
+    const newDay = !prev || dayKey(p.ts) !== dayKey(pts[i-1].ts);
+    const dateLbl = newDay ? `<text x="${cx}" y="${H-6}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${day.getDate()}/${day.getMonth()+1}</text>` : "";
+    return `<text x="${cx}" y="${H-padBot+12}" font-size="8.5" fill="var(--text3)" text-anchor="middle">${mark}</text>${dateLbl}`;
+  }).join("");
+
+  return `<div class="card"><div class="card-title">Tendance matin / soir</div>
+    <div class="chart-legend"><span><b style="color:var(--accent)">—</b> Systolique</span><span><b style="color:#3563e9">—</b> Diastolique</span><span style="color:var(--text3)">1 point = moyenne d'une demi-journée (M/S)</span></div>
+    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbes de tendance systolique et diastolique, un point par demi-journée (moyenne des mesures matin ou soir), coloré selon le niveau de sa valeur, avec les seuils 135 et 85">
       ${thLine(TH_SYS, "135")}${thLine(TH_DIA, "85")}
       ${line("dia", "#3563e9")}${line("sys", "var(--accent)")}
       ${dots("dia", diaLv)}${dots("sys", sysLv)}
+      ${xLabels}
     </svg></div></div>`;
 }
 
