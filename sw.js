@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pock-v40';
+const CACHE_NAME = 'pock-v41';
 const ASSETS = [
   './',
   './index.html',
