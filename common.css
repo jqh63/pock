@@ -22,6 +22,22 @@
   --accent: #3563e9;
 }
 
+/* Dark mode automatique — suit le thème système (prefers-color-scheme).
+   Override de la palette de base ; les apps qui redéfinissent leur propre
+   :root doivent ajouter leur propre bloc dark (cf. index.html). Palette
+   alignée sur l'esthétique des autres surfaces maison (PWA WoL). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0e14;
+    --surface: #161a25;
+    --border: #2a313f;
+    --text: #e4e6ef;
+    --text2: #aab4c4;   /* contraste AA sur --surface */
+    --text3: #7e8a9c;   /* petit texte — reste lisible sur --bg */
+    --accent: #5b82f5;  /* éclairci pour contraste sur fond sombre */
+  }
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
