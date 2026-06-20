@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pock — Pocket Tools</title>
 <meta name="description" content="Pock — pocket tools personnels, hors-ligne">
-<meta name="theme-color" content="#1a2332">
+<meta name="theme-color" content="#1a2332" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0e14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Pock">
@@ -50,6 +51,14 @@
 
   a.card { animation:pockFadeIn .35s ease both; }
   a.card:nth-child(2) { animation-delay:.06s; }
+
+  /* Dark mode — pastels d'état illisibles sur fond sombre, dérivés en teintes
+     foncées (la palette de base est gérée par common.css). */
+  @media (prefers-color-scheme: dark) {
+    a.card:hover { box-shadow:0 8px 24px rgba(0,0,0,.4); }
+    .data-msg.ok  { background:#0e2a1f; color:#6ee7b7; border-color:#1f5e44; }
+    .data-msg.err { background:#2a1416; color:#fca5a5; border-color:#5e2730; }
+  }
 </style>
 </head>
 <body>
