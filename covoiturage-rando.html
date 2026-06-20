@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Covoiturage Rando — Pock</title>
 <meta name="description" content="Calcul des frais de covoiturage pour les randonnées">
-<meta name="theme-color" content="#2d5a27">
+<meta name="theme-color" content="#2d5a27" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f120e" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Covoit Rando">
@@ -74,6 +75,31 @@
   .history-clear { margin-top: 12px; padding: 8px 14px; font-size: 14px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: #999; cursor: pointer; font-family: var(--font-serif); }
   .footer { text-align: center; font-size: 12px; color: var(--text3); padding: 8px 0; }
   .card, .result-card, .history { animation: pockFadeIn .35s ease both; }
+
+  /* Dark mode auto — override palette + classes à couleurs en dur */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f120e; --surface: #181c16; --border: #2c3128;
+      --text: #e6e8e2; --text2: #aab0a2; --text3: #828876;
+      --green: #6fae66; --green-bg: #18251a; --green-border: #2f5e2a;
+      --danger: #e06a5d; --danger-bg: #2a1614;
+    }
+    .input-group label { color: var(--text); }
+    .input-group input { background: #20251c; }
+    .btn-primary { box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+    .btn-primary:disabled { color: var(--text3); }
+    .btn-secondary { background: var(--surface); color: var(--text2); }
+    .detail-box { background: #20251c; }
+    .detail-row { color: var(--text2); border-bottom-color: var(--border); }
+    .save-btn { background: var(--surface); color: var(--text2); }
+    .save-btn:hover { background: #20251c; }
+    .tier-toggle, .tier-card { background: var(--surface); }
+    .tier-table { border-color: var(--border); }
+    .tier-row:nth-child(even) { background: rgba(255,255,255,.03); }
+    .history-title, .history-detail { color: var(--text); }
+    .history-item { border-bottom-color: var(--border); }
+    .history-clear { color: var(--text3); }
+  }
 </style>
 </head>
 <body>

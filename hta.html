@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tension — Pock</title>
 <meta name="description" content="Suivi de tension artérielle — automesure et cycle règle des 3 (matin/soir, 3 jours)">
-<meta name="theme-color" content="#1a2332">
+<meta name="theme-color" content="#1a2332" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0e14" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tension">
@@ -152,6 +153,21 @@
   .scale-card > summary::-webkit-details-marker { display: none; }
   .scale-card > summary::before { content: "▸ "; color: var(--text3); }
   .scale-card[open] > summary::before { content: "▾ "; color: var(--text3); }
+
+  /* Dark mode auto — palette de base via common.css ; ici on redéfinit
+     l'accent, les niveaux .lvN (pastels → teintes sombres + texte éclairci)
+     et les rares couleurs en dur. */
+  @media (prefers-color-scheme: dark) {
+    :root { --accent: #2dd4bf; }
+    .lv0 { --c:#6ab0c2; --bg:#13242a; --bd:#2a4a52; }
+    .lv1 { --c:#34d399; --bg:#0e2a1f; --bd:#1f5e44; }
+    .lv2 { --c:#d4a72c; --bg:#2a2410; --bd:#5e5223; }
+    .lv3 { --c:#e08a3c; --bg:#2a1e10; --bd:#5e4523; }
+    .lv4 { --c:#ea7a4c; --bg:#2a1810; --bd:#5e3a23; }
+    .lv5 { --c:#f87171; --bg:#2a1416; --bd:#5e2730; }
+    .btn-ghost:hover { color: #f87171; }
+    .dur-btn.on { background: #133b37; }
+  }
 </style>
 </head>
 <body>

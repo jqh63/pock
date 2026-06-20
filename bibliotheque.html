@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ma Bibliothèque — Pock</title>
 <meta name="description" content="Suivi de livres, réservations et lectures">
-<meta name="theme-color" content="#3d5a80">
+<meta name="theme-color" content="#3d5a80" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14120f" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Biblio">
@@ -83,6 +84,21 @@
   @media (max-width: 480px) {
     .form-grid { grid-template-columns: 1fr; }
     .header { flex-direction: column; }
+  }
+
+  /* Dark mode auto — override palette beige + classes à couleurs en dur.
+     Les badges de statut (pastels injectés en JS, l.~199) restent des chips
+     clairs lisibles sur fond sombre, volontairement non modifiés. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14120f; --surface: #1d1a16; --border: #322d27;
+      --text: #ece8e2; --text2: #b3aaa0; --text3: #8a8076; --text4: #6b6358;
+      --blue: #6f93c0; --blue-bg: #1a2230;
+    }
+    .btn-danger, .btn-icon.del:hover { color: #e06a5d; }
+    .btn-icon:hover { background: rgba(255,255,255,.06); }
+    input, textarea, select, .mini-select { background: #211d18; }
+    .footer { border-top-color: var(--border); }
   }
 </style>
 </head>
